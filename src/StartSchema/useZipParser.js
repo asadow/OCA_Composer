@@ -41,6 +41,7 @@ const useZipParser = () => {
   };
 
   const processLabelsDescriptionRootUnitsEntries = (labels, description, root, units, entryCodes, entries, conformance, characterEncoding, languageList, formatRules, cardinalityData, dataStandards) => {
+
     const newSavedEntryCodes = {};
     const newLangAttributeRowData = {};
     const newAttributeRowData = [];
@@ -49,6 +50,24 @@ const useZipParser = () => {
     const newDataStandardsRowData = [];
     const attributeListStringMap = {};
     let attributesWithListType = [];
+
+    // Extract attribute_units from different possible unit overlay structures
+    let attributeUnits = {};
+    if (units) {
+      if (Array.isArray(units)) {
+        // If units is an array (directly from overlays.unit), take the first element
+        attributeUnits = units[0]?.attribute_units || {};
+        console.log("Extracted attribute_units from array:", attributeUnits);
+      } else if (units.attribute_units) {
+        // If units is an object with attribute_units property
+        attributeUnits = units.attribute_units;
+        console.log("Using attribute_units from object:", attributeUnits);
+      } else if (units[0] && units[0].attribute_units) {
+        // If units is an object with numeric keys (like {0: {attribute_units: {...}}})
+        attributeUnits = units[0].attribute_units;
+        console.log("Extracted attribute_units from indexed object:", attributeUnits);
+      }
+    }
 
     // Parse entry codes for list type attributes
     if (entries.length > 0) {
@@ -142,12 +161,15 @@ const useZipParser = () => {
 
     // Parse attributes details such as type and unit + Parsing conformance and character encoding to characterEncodingRowData
     attributeList.forEach((item) => {
+      const unitValue = attributeUnits[item];
+      console.log(`Attribute ${item} unit value:`, unitValue);
+      
       newAttributeRowData.push({
         Attribute: item,
         Flagged: root?.['flagged_attributes']?.includes(item),
         List: attributesWithListType.includes(item),
         Type: root?.['attributes']?.[item],
-        Unit: units?.['attribute_units']?.[item]
+        Unit: unitValue
       });
 
       const newRowForCharacterEncoding = { Attribute: item };
