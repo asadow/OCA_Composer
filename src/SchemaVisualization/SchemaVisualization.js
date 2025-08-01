@@ -50,6 +50,7 @@ const SchemaVisualization = () => {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewSwitchLoading, setViewSwitchLoading] = useState(false);
   const [hasHierarchy, setHasHierarchy] = useState(false);
   const [loadedSchema, setLoadedSchema] = useState(null);
 
@@ -110,19 +111,21 @@ const SchemaVisualization = () => {
         setNodes(result.nodes);
         setEdges(result.edges);
 
-        // Trigger fit view after nodes and edges are set
-        setTimeout(() => {
-          if (reactFlowInstanceRef.current) {
-            reactFlowInstanceRef.current.fitView({ padding: 0.1, duration: 300 });
-          }
-        }, 150);
+        // Only trigger fit view if not switching views (handleViewModeChange will handle it)
+        if (!viewSwitchLoading) {
+          setTimeout(() => {
+            if (reactFlowInstanceRef.current) {
+              reactFlowInstanceRef.current.fitView({ padding: 0.1, duration: 300 });
+            }
+          }, 150);
+        }
       } else {
         // Invalid layout result
       }
     } catch (error) {
       // Error generating layout
     }
-  }, [loadedSchema, OCAPackage, viewMode, currentLanguage]);
+  }, [loadedSchema, OCAPackage, viewMode, currentLanguage, viewSwitchLoading]);
 
   // Effect to handle file reading from navigation state
   useEffect(() => {
@@ -198,15 +201,19 @@ const SchemaVisualization = () => {
 
   // Handle view mode changes
   const handleViewModeChange = useCallback(() => {
+    // Start loading state
+    setViewSwitchLoading(true);
+
     const nextMode = viewMode === "tree" ? "database" : "tree";
     setViewMode(nextMode);
 
-    // Trigger fit view after a brief delay to ensure layout is updated
+    // Hide loading and trigger fit view after layout updates
     setTimeout(() => {
+      setViewSwitchLoading(false);
       if (reactFlowInstanceRef.current) {
         reactFlowInstanceRef.current.fitView({ padding: 0.1, duration: 300 });
       }
-    }, 100);
+    }, 250); // Shorter delay since we're only replacing the graph area
   }, [viewMode]);
 
   // Handle language changes
@@ -237,9 +244,11 @@ const SchemaVisualization = () => {
       <Box
         sx={{
           display: "flex",
+          flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          height: "100vh"
+          height: "100vh",
+          gap: 2
         }}
       >
         <Typography>{t("Loading schema visualization...")}</Typography>
@@ -345,25 +354,38 @@ const SchemaVisualization = () => {
             </Box>
           )}
 
-          {/* React Flow */}
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onInit={(instance) => {
-              reactFlowInstanceRef.current = instance;
-            }}
-            nodeTypes={nodeTypes}
-            fitView
-            fitViewOptions={{ padding: 0.1 }}
-            style={{ width: "100%", height: "100%" }}
-          >
-            <Controls />
-            <MiniMap nodeStrokeColor="#666" nodeColor="#fff" nodeBorderRadius={4} />
-            <Background variant="dots" gap={12} size={1} />
-          </ReactFlow>
+          {/* React Flow or Loading */}
+          {viewSwitchLoading ? (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+                height: "100%",
+                backgroundColor: "#f5f5f5"
+              }}
+            />
+          ) : (
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onInit={(instance) => {
+                reactFlowInstanceRef.current = instance;
+              }}
+              nodeTypes={nodeTypes}
+              fitView
+              fitViewOptions={{ padding: 0.1 }}
+              style={{ width: "100%", height: "100%" }}
+            >
+              <Controls />
+              <MiniMap nodeStrokeColor="#666" nodeColor="#fff" nodeBorderRadius={4} />
+              <Background variant="dots" gap={12} size={1} />
+            </ReactFlow>
+          )}
 
           {/* No Hierarchy Message */}
           {!hasHierarchy && (
