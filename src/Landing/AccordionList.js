@@ -73,9 +73,15 @@ const AccordionList = () => {
   };
 
   const navigateToViewPage = () => {
-    setIsZip(true);
-    setCurrentPage("View");
-    navigate("/start");
+    // Navigate to visualization if we have any file uploaded
+    if (rawFile && rawFile.length > 0) {
+      // Pass the file object so the visualization page can read it
+      navigate("/schema-visualization", { state: { rawFile: rawFile[0] } });
+    } else {
+      setIsZip(true);
+      setCurrentPage("View");
+      navigate("/start");
+    }
   };
 
   const navigateToPreviewSchema = () => {

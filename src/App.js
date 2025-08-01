@@ -13,6 +13,7 @@ import OCADataValidator from "./OCADataValidator/OCADataValidator";
 import LearnAboutSchemaRule from "./OCADataValidator/LearnAboutSchemaRule";
 import LearnAboutDataVerification from "./OCADataValidator/LearnAboutDataVerification";
 import OCAMerge from "./OCAMerge/OCAMerge";
+import SchemaVisualization from "./SchemaVisualization/SchemaVisualization";
 // import Tutorial from "./Tutorial/Tutorial";
 import useUnitFramingUpdater from "./hooks/useUnitFramingUpdater";
 import {
@@ -29,6 +30,9 @@ import {
   getUnitsFramedThatAlreadyExistInOcaPackage,
   hasUnitFramingOverlay
 } from "./constants/utils";
+import TreeViewPage from "./TreeViewPage";
+import DatabaseViewPage from "./DatabaseViewPage";
+import UnifiedGraphView from "./UnifiedGraphView";
 
 export const Context = createContext();
 
@@ -178,13 +182,13 @@ function App() {
     } else if (schemaDataConformantHeader.length === 0) {
       ogSchemaDataConformantHeaderRef.current = [];
     }
-  }, [schemaDataConformantHeader]);
+  }, [schemaDataConformantHeader, datasetRawFile.length]);
 
   useEffect(() => {
     if (history[history.length - 1] !== currentPage) {
       setHistory((prev) => [...prev, currentPage]);
     }
-  }, [currentPage]);
+  }, [currentPage, history]);
 
   // Measuring page views
   useEffect(() => {
@@ -239,7 +243,7 @@ function App() {
       setAttributeRowData(newAttributesArray);
       setCharacterEncodingRowData(newCharacterEncodingArray);
     }
-  }, [attributesList]);
+  }, [attributesList, attributeRowData, characterEncodingRowData, overlay]);
 
   useEffect(() => {
     const newFormatRuleArray = [];
@@ -260,7 +264,7 @@ function App() {
       }
     });
     setFormatRuleRowData(newFormatRuleArray);
-  }, [attributeRowData]);
+  }, [attributeRowData, formatRuleRowData]);
 
   useEffect(() => {
     const newDataStandardsArray = [];
@@ -282,7 +286,7 @@ function App() {
     });
 
     setDataStandardsRowData(newDataStandardsArray);
-  }, [attributeRowData]);
+  }, [attributeRowData, dataStandardsRowData]);
 
   // unit framing starts here
   useEffect(() => {
@@ -463,7 +467,7 @@ function App() {
     });
 
     setRangeRowData(newRangeArray);
-  }, [attributeRowData]);
+  }, [attributeRowData, rangeRowData]);
 
   useEffect(() => {
     if (jsonRawFile.length > 0) {
@@ -485,7 +489,14 @@ function App() {
       });
       setMatchingRowData(newMatchingRowData);
     }
-  }, [datasetRawFile, jsonRawFile, attributesList]);
+  }, [
+    datasetRawFile,
+    jsonRawFile,
+    attributesList,
+    lanAttributeRowData,
+    languages,
+    matchingRowData
+  ]);
 
   function createEntryCodeRowData(languages, attributesWithLists, savedEntryCodes) {
     const newEntryCodesArray = [];
@@ -717,6 +728,7 @@ function App() {
                     />
                   }
                 />
+                <Route path="/schema-visualization" element={<SchemaVisualization />} />
                 <Route path="/oca-data-verifier" element={<OCADataValidator />} />
                 {/* <Route
                   path='/help_designing_datasets'
@@ -729,6 +741,9 @@ function App() {
                   path="/learn_data_verification"
                   element={<LearnAboutDataVerification />}
                 />
+                <Route path="/tree-view" element={<TreeViewPage />} />
+                <Route path="/database-view" element={<DatabaseViewPage />} />
+                <Route path="/unified-graph" element={<UnifiedGraphView />} />
                 <Route path="*" element={<Navigate to="/" />} />
                 <Route
                   path="/oca-merge"

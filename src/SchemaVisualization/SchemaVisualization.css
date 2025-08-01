@@ -1,0 +1,548 @@
+/* Schema Visualization Styles */
+
+/* Common node styles */
+.react-flow__node {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* Enhanced placeholder node styling */
+.placeholder-node {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border: 2px dashed #ff9800;
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 140px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.placeholder-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(255, 152, 0, 0.3);
+}
+
+.placeholder-node-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.placeholder-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.placeholder-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f57c00;
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+/* Enhanced reference node styling */
+.reference-node {
+  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+  border: 2px solid #4caf50;
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 160px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.2);
+  transition: all 0.3s ease;
+}
+
+.reference-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(76, 175, 80, 0.3);
+}
+
+.reference-node-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.reference-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.reference-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2e7d32;
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.reference-type {
+  font-size: 11px;
+  color: #4caf50;
+  background: #c8e6c9;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Enhanced root node styling */
+.root-node {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 3px solid #2196f3;
+  border-radius: 16px;
+  padding: 20px;
+  min-width: 180px;
+  text-align: center;
+  box-shadow: 0 6px 16px rgba(33, 150, 243, 0.25);
+  transition: all 0.3s ease;
+}
+
+.root-node:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(33, 150, 243, 0.35);
+}
+
+.root-node-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.root-icon {
+  font-size: 28px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.root-label {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1565c0;
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.root-type {
+  font-size: 11px;
+  color: #2196f3;
+  background: #bbdefb;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Original Database Node Styling */
+:root {
+  /* Field type colors - reused for backgrounds and borders */
+  --placeholder-bg: #fef3c7;
+  --placeholder-border: #d97706;
+  --reference-bg: #d9e8d2;
+  --reference-border: #84c48d;
+  --text-bg: #f3f4f6;
+  --text-border: #6b7280;
+  --datetime-bg: #dcfafbff;
+  --datetime-border: #4ab6c0ff;
+  --numeric-bg: #dbeafe;
+  --numeric-border: #3b82f6;
+  --boolean-bg: #fce7f3;
+  --boolean-border: #ec4899;
+  
+  /* UI component colors */
+  --header-bg: #d9d3d3;
+  --node-badge-bg: #ffffff;
+  --border-color: #ccc;
+  --default-field-bg: #f9fafb;
+  --default-field-border: #9ca3af;
+  
+  /* Text colors */
+  --field-type-color: #6b7280;
+  --header-text-color: black;
+  
+  /* Background colors */
+  --node-bg: white;
+  
+  /* Border radius tokens */
+  --border-radius-sm: 3px;
+  --border-radius-md: 4px;
+  
+  /* Font size tokens */
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  
+  /* Control panel tokens */
+  --control-panel-bg: white;
+  --control-panel-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  --button-bg: #f0f0f0;
+  --button-border: #ccc;
+  --text-muted: #666;
+}
+
+.database-node {
+  background: var(--node-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  min-width: 200px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Only apply dashed border to tree view placeholders - but tree view doesn't use database-node class */
+/* Left-right view placeholders get orange headers, not dashed borders */
+.database-node.placeholder {
+  box-sizing: border-box;
+}
+
+.database-header {
+  background: var(--header-bg);
+  color: var(--header-text-color);
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Placeholder nodes should have orange headers like placeholder fields */
+.database-node.placeholder .database-header {
+  background: var(--placeholder-bg);
+}
+
+/* Reference nodes should have light brown headers like reference fields */
+.database-node.reference .database-header {
+  background: var(--header-bg);
+}
+
+.placeholder-node-label{
+    font-size: var(--font-size-sm);
+    color: var(--header-text-color);
+}
+
+.node-type-badge {
+  background: var(--node-badge-bg);
+  padding: 2px 6px;
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.database-fields {
+  padding: 0px;
+}
+
+.field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  margin: 2px 0;
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-sm);
+  position: relative;
+  min-height: 32px;
+}
+
+.field.Text {
+  background: var(--text-bg);
+  border-left: 3px solid var(--text-border);
+}
+
+.field.DateTime {
+  background: var(--datetime-bg);
+  border-left: 3px solid var(--datetime-border);
+}
+
+.field.Numeric {
+  background: var(--numeric-bg);
+  border-left: 3px solid var(--numeric-border);
+}
+
+.field.Boolean {
+  background: var(--boolean-bg);
+  border-left: 3px solid var(--boolean-border);
+}
+
+.field.Reference {
+  background: var(--reference-bg);
+  border-left: 3px solid var(--reference-border);
+}
+
+.field.Placeholder {
+  background: var(--placeholder-bg);
+  border-left: 3px solid var(--placeholder-border);
+}
+
+/* Default styling for array types and other field types */
+.field:not(.Text):not(.DateTime):not(.Numeric):not(.Boolean):not(.Reference):not(.Placeholder) {
+  background: var(--default-field-bg);
+  border-left: 3px solid var(--default-field-border);
+}
+
+.field-name {
+  font-weight: 500;
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+}
+
+.field-type {
+  color: var(--field-type-color);
+  font-size: var(--font-size-xs);
+  margin-left: 8px;
+  text-align: right;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.field-type-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reference-icon, .placeholder-icon {
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+/* View control panel styles */
+.view-control-panel {
+  background: var(--control-panel-bg);
+  padding: 10px;
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--control-panel-shadow);
+}
+
+.view-mode-label {
+  font-size: var(--font-size-xs);
+  margin-bottom: 5px;
+  color: var(--text-muted);
+}
+
+.view-toggle-button {
+  padding: 8px 16px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--button-border);
+  background: var(--button-bg);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+/* Enhanced Schema Visualization Container */
+.schema-visualization-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+/* Enhanced control panel styling */
+.view-control-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  min-width: 220px;
+}
+
+.view-mode-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.view-toggle-button {
+  background: #1976d2 !important;
+  color: white !important;
+  border: none !important;
+  padding: 12px 20px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3) !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  min-height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.view-toggle-button:hover {
+  background: #1565c0 !important;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+.view-toggle-button:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 6px rgba(25, 118, 210, 0.3) !important;
+}
+
+.view-toggle-button:disabled {
+  background: #ccc !important;
+  color: #666 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.language-control-panel {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  min-width: 180px;
+}
+
+.language-control-panel .MuiTypography-caption {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #333 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  margin-bottom: 4px !important;
+}
+
+.language-control-panel .MuiButton-root {
+  background: #4caf50 !important;
+  color: white !important;
+  border: none !important;
+  padding: 10px 16px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3) !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  min-height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.language-control-panel .MuiButton-root:hover {
+  background: #388e3c !important;
+  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+.language-control-panel .MuiButton-root:disabled {
+  background: #ccc !important;
+  color: #666 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* React Flow edge styling */
+.react-flow__edge-path {
+  stroke-width: 3;
+  transition: stroke-width 0.2s ease;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 4;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5, 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5, 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+  from {
+    stroke-dashoffset: 10;
+  }
+}
+
+/* Enhanced minimap and controls */
+.react-flow__minimap {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+.react-flow__controls {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+.react-flow__controls button {
+  border-radius: 4px;
+}
+
+.react-flow__controls button:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.react-flow__background {
+  background: #fafafa;
+}
+
+/* Custom scrollbar for database fields */
+.database-fields::-webkit-scrollbar {
+  width: 6px;
+}
+
+.database-fields::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.database-fields::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.database-fields::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
