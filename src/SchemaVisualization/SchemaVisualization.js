@@ -109,6 +109,13 @@ const SchemaVisualization = () => {
       if (result && result.nodes && result.edges) {
         setNodes(result.nodes);
         setEdges(result.edges);
+
+        // Trigger fit view after nodes and edges are set
+        setTimeout(() => {
+          if (reactFlowInstanceRef.current) {
+            reactFlowInstanceRef.current.fitView({ padding: 0.1, duration: 300 });
+          }
+        }, 150);
       } else {
         // Invalid layout result
       }
@@ -193,6 +200,13 @@ const SchemaVisualization = () => {
   const handleViewModeChange = useCallback(() => {
     const nextMode = viewMode === "tree" ? "database" : "tree";
     setViewMode(nextMode);
+
+    // Trigger fit view after a brief delay to ensure layout is updated
+    setTimeout(() => {
+      if (reactFlowInstanceRef.current) {
+        reactFlowInstanceRef.current.fitView({ padding: 0.1, duration: 300 });
+      }
+    }, 100);
   }, [viewMode]);
 
   // Handle language changes

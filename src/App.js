@@ -30,9 +30,6 @@ import {
   getUnitsFramedThatAlreadyExistInOcaPackage,
   hasUnitFramingOverlay
 } from "./constants/utils";
-import TreeViewPage from "./TreeViewPage";
-import DatabaseViewPage from "./DatabaseViewPage";
-import UnifiedGraphView from "./UnifiedGraphView";
 
 export const Context = createContext();
 
@@ -741,9 +738,6 @@ function App() {
                   path="/learn_data_verification"
                   element={<LearnAboutDataVerification />}
                 />
-                <Route path="/tree-view" element={<TreeViewPage />} />
-                <Route path="/database-view" element={<DatabaseViewPage />} />
-                <Route path="/unified-graph" element={<UnifiedGraphView />} />
                 <Route path="*" element={<Navigate to="/" />} />
                 <Route
                   path="/oca-merge"
