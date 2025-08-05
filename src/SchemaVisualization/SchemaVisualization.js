@@ -16,13 +16,14 @@ import "@xyflow/react/dist/style.css";
 import { Box, Button, Typography } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 import { Context } from "../App";
 import Header from "../Header/Header";
 import Footer from "../Footer/Footer";
 import { CustomPalette } from "../constants/customPalette";
 import { PlaceholderNode, ReferenceNode, RootNode, DatabaseNode } from "./CustomNodes";
-import { generateTreeLayout, generateDatabaseLayout } from "./layoutGenerators";
+import { generateTreeLayout, generateDetailedLayout } from "./layoutGenerators";
 import { hasHierarchicalStructure, extractSchemaDataFromPackage } from "./dataUtils";
 import "./SchemaVisualization.css";
 
@@ -31,7 +32,26 @@ const nodeTypes = {
   placeholderNode: PlaceholderNode,
   referenceNode: ReferenceNode,
   rootNode: RootNode,
-  databaseLR: DatabaseNode
+  detailedLR: DatabaseNode
+};
+
+// Update the language mapping to work with i18next language codes
+const i18nextToOCALanguageMap = {
+  en: "eng",
+  fr: "fra",
+  es: "spa",
+  de: "deu",
+  it: "ita"
+};
+
+/**
+ * Get OCA language code from i18next language code
+ * @param {string} i18nextLang - i18next language code (e.g., "en", "fr")
+ * @returns {string} OCA language code (e.g., "eng", "fra")
+ */
+const getOCALanguageCode = (i18nextLang) => {
+  const baseCode = i18nextLang.split("-")[0]; // Handle "en-US" -> "en"
+  return i18nextToOCALanguageMap[baseCode] || "eng";
 };
 
 /**
@@ -42,11 +62,10 @@ const SchemaVisualization = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const context = useContext(Context);
-  const { OCAPackage, languages = ["English"], setCurrentPage } = context;
+  const { OCAPackage, setCurrentPage } = context;
 
   // State for visualization
   const [viewMode, setViewMode] = useState("tree");
-  const [currentLanguage, setCurrentLanguage] = useState(languages[0] || "English");
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,10 +102,8 @@ const SchemaVisualization = () => {
     }
 
     // Create a mock context object with the schema data
-    const mockContext = extractSchemaDataFromPackage(
-      currentSchema,
-      currentLanguage.toLowerCase().slice(0, 3)
-    );
+    const languageCode = getOCALanguageCode(i18next.language);
+    const mockContext = extractSchemaDataFromPackage(currentSchema, languageCode);
 
     if (!mockContext) {
       // Failed to create mock context
@@ -98,13 +115,10 @@ const SchemaVisualization = () => {
     try {
       if (viewMode === "tree") {
         // Generating tree layout
-        result = generateTreeLayout(mockContext);
+        result = generateTreeLayout(mockContext, languageCode, t("Root"));
       } else {
-        // Generating database layout
-        result = generateDatabaseLayout(
-          mockContext,
-          currentLanguage.toLowerCase().slice(0, 3)
-        );
+        // Generating detailed layout
+        result = generateDetailedLayout(mockContext, languageCode, t("Root"));
       }
 
       if (result && result.nodes && result.edges) {
@@ -125,7 +139,18 @@ const SchemaVisualization = () => {
     } catch (error) {
       // Error generating layout
     }
-  }, [loadedSchema, OCAPackage, viewMode, currentLanguage, viewSwitchLoading]);
+  }, [loadedSchema, OCAPackage, viewMode, viewSwitchLoading, t]);
+
+  // Listen for i18next language changes and regenerate layout
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      // Regenerate layout when language changes
+      generateLayout();
+    };
+
+    i18next.on("languageChanged", handleLanguageChange);
+    return () => i18next.off("languageChanged", handleLanguageChange);
+  }, [generateLayout]);
 
   // Effect to handle file reading from navigation state
   useEffect(() => {
@@ -204,7 +229,7 @@ const SchemaVisualization = () => {
     // Start loading state
     setViewSwitchLoading(true);
 
-    const nextMode = viewMode === "tree" ? "database" : "tree";
+    const nextMode = viewMode === "tree" ? "detailed" : "tree";
     setViewMode(nextMode);
 
     // Hide loading and trigger fit view after layout updates
@@ -215,13 +240,6 @@ const SchemaVisualization = () => {
       }
     }, 250); // Shorter delay since we're only replacing the graph area
   }, [viewMode]);
-
-  // Handle language changes
-  const handleLanguageChange = useCallback(() => {
-    const currentIndex = languages.indexOf(currentLanguage);
-    const nextIndex = (currentIndex + 1) % languages.length;
-    setCurrentLanguage(languages[nextIndex]);
-  }, [languages, currentLanguage]);
 
   // Regenerate layout when view mode or language changes
   useEffect(() => {
@@ -329,30 +347,41 @@ const SchemaVisualization = () => {
           {/* Controls */}
           <Box className="view-control-panel">
             <Typography className="view-mode-label">
-              {t("Current")}: {viewMode === "tree" ? t("Tree") : t("Database")}
+              {t("Current")}: {viewMode === "tree" ? t("Tree") : t("Detailed")}
             </Typography>
             <Button
               onClick={handleViewModeChange}
               className="view-toggle-button"
               size="small"
+              sx={{
+                backgroundColor: CustomPalette.PRIMARY,
+                color: "white",
+                border: "none",
+                padding: "12px 20px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                boxShadow: `0 2px 8px ${CustomPalette.PRIMARY}40`,
+                minHeight: "44px",
+                whiteSpace: "nowrap",
+                "&:hover": {
+                  backgroundColor: CustomPalette.SECONDARY,
+                  boxShadow: `0 4px 12px ${CustomPalette.SECONDARY}66`,
+                  transform: "translateY(-1px)"
+                },
+                "&:active": {
+                  transform: "translateY(0)",
+                  boxShadow: `0 2px 6px ${CustomPalette.SECONDARY}4D`
+                }
+              }}
             >
               {viewMode === "tree"
-                ? t("Switch to Database View")
+                ? t("Switch to Detailed View")
                 : t("Switch to Tree View")}
             </Button>
           </Box>
-
-          {/* Language Controls (if multiple languages available) */}
-          {languages.length > 1 && (
-            <Box className="language-control-panel">
-              <Typography variant="caption" display="block">
-                {t("Language")}: {currentLanguage}
-              </Typography>
-              <Button onClick={handleLanguageChange} size="small" variant="outlined">
-                {t("Switch Language")}
-              </Button>
-            </Box>
-          )}
 
           {/* React Flow or Loading */}
           {viewSwitchLoading ? (

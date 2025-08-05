@@ -148,13 +148,22 @@ export const extractSchemaDataFromPackage = (ocaPackage, language = "eng") => {
     return null;
   }
 
+  // Extract labels from the bundle's overlays
+  const labelOverlay =
+    bundle.overlays?.label?.find((l) => l.language === language) ||
+    bundle.overlays?.label?.[0] ||
+    {};
+  const labels = labelOverlay.attribute_labels || {};
+
   return {
     OCAPackage: ocaPackage,
     bundle,
     dependencies: ocaPackage.dependencies || [],
     primaryLanguage: language,
     attributes: bundle.capture_base?.attributes || {},
-    overlays: bundle.overlays || {}
+    overlays: bundle.overlays || {},
+    labels,
+    labelOverlay
   };
 };
 

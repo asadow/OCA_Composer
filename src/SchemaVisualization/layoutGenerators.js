@@ -45,9 +45,11 @@ const centerLayout = (nodes) => {
 /**
  * Generate hierarchical tree layout nodes and edges
  * @param {Object} context - React context containing schema data OR processed schema data
+ * @param {string} language - Language code for labels (e.g., "eng", "fra")
+ * @param {string} rootLabel - Translated label for the root node
  * @returns {Object} Object containing nodes and edges arrays
  */
-export const generateTreeLayout = (context) => {
+export const generateTreeLayout = (context, language = "eng", rootLabel = "Root") => {
   // Check if we have processed schema data or need to extract from context
   let schemaData;
   if (context.OCAPackage && context.bundle && context.dependencies) {
@@ -66,9 +68,9 @@ export const generateTreeLayout = (context) => {
   const dependencyMap = createDependencyMap(dependencies);
   const processedNodes = new Set();
 
-  // Get label overlay for attribute labels
+  // Get label overlay for attribute labels using the specified language
   const labelOverlay =
-    overlays?.label?.[0] || overlays?.label?.find((l) => l.language === "eng") || {};
+    overlays?.label?.find((l) => l.language === language) || overlays?.label?.[0] || {};
 
   // Recursive function to build hierarchical structure
   const buildHierarchy = ({
@@ -84,7 +86,7 @@ export const generateTreeLayout = (context) => {
     processedNodes.add(nodeId);
 
     const labels = nodeLabelOverlay?.attribute_labels || {};
-    const nodeName = metaOverlay?.name ? metaOverlay.name : "Parent";
+    const nodeName = metaOverlay?.name ? metaOverlay.name : rootLabel;
 
     const nodeData = {
       id: nodeId,
@@ -103,10 +105,12 @@ export const generateTreeLayout = (context) => {
         const refDep = dependencyMap[refId];
 
         if (refDep && refDep.capture_base) {
-          const refLabelOverlay = refDep.overlays?.label?.find(
-            (l) => l.language === "eng"
-          );
-          const refMetaOverlay = refDep.overlays?.meta?.find((m) => m.language === "eng");
+          const refLabelOverlay =
+            refDep.overlays?.label?.find((l) => l.language === language) ||
+            refDep.overlays?.label?.[0];
+          const refMetaOverlay =
+            refDep.overlays?.meta?.find((m) => m.language === language) ||
+            refDep.overlays?.meta?.[0];
 
           if (!processedNodes.has(refId)) {
             const childNode = buildHierarchy({
@@ -214,12 +218,13 @@ export const generateTreeLayout = (context) => {
 };
 
 /**
- * Generate database-style left-to-right layout nodes and edges
+ * Generate detailed-style left-to-right layout nodes and edges
  * @param {Object} context - React context containing schema data
- * @param {string} language - Language code for labels
+ * @param {string} language - Language code for labels (e.g., "eng", "fra")
+ * @param {string} rootLabel - Translated label for the root node
  * @returns {Object} Object containing nodes and edges arrays
  */
-export const generateDatabaseLayout = (context, language = "eng") => {
+export const generateDetailedLayout = (context, language = "eng", rootLabel = "Root") => {
   // Check if we have processed schema data or need to extract from context
   let schemaData;
   if (context.OCAPackage && context.bundle && context.dependencies) {
@@ -246,7 +251,7 @@ export const generateDatabaseLayout = (context, language = "eng") => {
 
     allNodes.set(nodeId, {
       id: nodeId,
-      type: "databaseLR",
+      type: "detailedLR",
       data: {
         title,
         fields,
@@ -292,7 +297,7 @@ export const generateDatabaseLayout = (context, language = "eng") => {
 
   // Start with root node
   const rootFields = processAttributes(attributes, schemaData.labels);
-  processNode("root", "root", "OCA Schema", rootFields, 0);
+  processNode("root", "root", rootLabel, rootFields, 0);
 
   // Convert to ReactFlow format and position nodes using left-to-right layout
   const nodes = [];

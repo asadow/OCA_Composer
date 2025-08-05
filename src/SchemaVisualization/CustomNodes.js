@@ -68,13 +68,13 @@ export const RootNode = ({ data, isConnectable }) => (
 );
 
 /**
- * Database Node Component - represents schema entities with fields
+ * Detailed Node Component - represents schema entities with fields in left-to-right layout
  */
 export const DatabaseNode = ({ data, isConnectable }) => {
   const { title, fields, nodeType } = data;
 
   return (
-    <div className={`database-node ${nodeType}`}>
+    <div className={`detailed-node ${nodeType}`}>
       {/* Only show input handle for non-root nodes */}
       {nodeType !== "root" && (
         <Handle
@@ -85,12 +85,9 @@ export const DatabaseNode = ({ data, isConnectable }) => {
         />
       )}
 
-      <div className="database-header">
-        <strong>{title}</strong>
-        <span className="node-type-badge">{nodeType}</span>
-      </div>
+      <div className="detailed-header">{title}</div>
 
-      <div className="database-fields">
+      <div className="detailed-fields">
         {fields.map((field) => (
           <div key={field.originalKey || field.name} className={`field ${field.type}`}>
             <span className="field-name">{field.name}</span>
