@@ -244,6 +244,18 @@
   padding: 0px;
 }
 
+/* Consistent node sizing for better layout */
+.detailed-node {
+  min-width: 200px;
+  max-width: 300px;
+  width: auto;
+}
+
+.detailed-node.root {
+  min-width: 250px;
+  max-width: 400px;
+}
+
 .field {
   display: flex;
   justify-content: space-between;
@@ -255,6 +267,17 @@
   position: relative;
   min-height: 36px;
   line-height: 1.4;
+}
+
+/* Styling for hidden fields indicator */
+.field.hidden-fields-indicator {
+  background: #f8f9fa;
+  border-left: 3px solid #e9ecef;
+  opacity: 0.8;
+}
+
+.field.hidden-fields-indicator:hover {
+  background: #e9ecef;
 }
 
 .field.Text {
