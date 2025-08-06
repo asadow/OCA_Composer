@@ -179,13 +179,13 @@ function App() {
     } else if (schemaDataConformantHeader.length === 0) {
       ogSchemaDataConformantHeaderRef.current = [];
     }
-  }, [schemaDataConformantHeader, datasetRawFile.length]);
+  }, [schemaDataConformantHeader]);
 
   useEffect(() => {
     if (history[history.length - 1] !== currentPage) {
       setHistory((prev) => [...prev, currentPage]);
     }
-  }, [currentPage, history]);
+  }, [currentPage]);
 
   // Measuring page views
   useEffect(() => {
@@ -240,7 +240,7 @@ function App() {
       setAttributeRowData(newAttributesArray);
       setCharacterEncodingRowData(newCharacterEncodingArray);
     }
-  }, [attributesList, attributeRowData, characterEncodingRowData, overlay]);
+  }, [attributesList]);
 
   useEffect(() => {
     const newFormatRuleArray = [];
@@ -261,7 +261,7 @@ function App() {
       }
     });
     setFormatRuleRowData(newFormatRuleArray);
-  }, [attributeRowData, formatRuleRowData]);
+  }, [attributeRowData]);
 
   useEffect(() => {
     const newDataStandardsArray = [];
@@ -283,7 +283,7 @@ function App() {
     });
 
     setDataStandardsRowData(newDataStandardsArray);
-  }, [attributeRowData, dataStandardsRowData]);
+  }, [attributeRowData]);
 
   // unit framing starts here
   useEffect(() => {
@@ -464,7 +464,7 @@ function App() {
     });
 
     setRangeRowData(newRangeArray);
-  }, [attributeRowData, rangeRowData]);
+  }, [attributeRowData]);
 
   useEffect(() => {
     if (jsonRawFile.length > 0) {
@@ -486,14 +486,7 @@ function App() {
       });
       setMatchingRowData(newMatchingRowData);
     }
-  }, [
-    datasetRawFile,
-    jsonRawFile,
-    attributesList,
-    lanAttributeRowData,
-    languages,
-    matchingRowData
-  ]);
+  }, [datasetRawFile, jsonRawFile, attributesList]);
 
   function createEntryCodeRowData(languages, attributesWithLists, savedEntryCodes) {
     const newEntryCodesArray = [];
@@ -725,8 +718,8 @@ function App() {
                     />
                   }
                 />
-                <Route path="/schema-visualization" element={<SchemaVisualization />} />
                 <Route path="/oca-data-verifier" element={<OCADataValidator />} />
+                <Route path="/schema-visualization" element={<SchemaVisualization />} />
                 {/* <Route
                   path='/help_designing_datasets'
                   element={<GuidanceForDesigningDataSets />}

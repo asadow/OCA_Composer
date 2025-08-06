@@ -89,9 +89,18 @@ export const DatabaseNode = ({ data, isConnectable }) => {
 
       <div className="detailed-fields">
         {fields.map((field) => (
-          <div key={field.originalKey || field.name} className={`field ${field.type}`}>
+          <div
+            key={field.originalKey || field.name}
+            className={`field ${field.isReference ? "Reference" : field.isPlaceholder ? "Placeholder" : field.type}`}
+          >
             <span className="field-name">{field.name}</span>
-            <span className="field-type">{field.type}</span>
+            <span className="field-type">
+              {field.isReference
+                ? "Reference"
+                : field.isPlaceholder
+                  ? "Placeholder"
+                  : field.type}
+            </span>
             {field.isReference && (
               <Handle
                 type="source"

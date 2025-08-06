@@ -1,7 +1,7 @@
 /**
  * Layout generators for different visualization modes
  */
-import { hierarchy, tree } from "d3-hierarchy";
+import dagre from "dagre";
 import {
   createDependencyMap,
   getDependencyInfo,
@@ -10,36 +10,101 @@ import {
 } from "./dataUtils";
 
 /**
- * Center a layout around the origin by calculating its bounds and applying offset
- * @param {Array} nodes - Array of nodes with position properties
- * @returns {Array} - Centered nodes
+ * Calculate node dimensions dynamically based on content
+ * @param {Object} node - Node object with data
+ * @param {string} viewMode - 'tree' or 'detailed' to determine sizing strategy
+ * @returns {Object} Object with width and height properties
  */
-const centerLayout = (nodes) => {
-  if (nodes.length === 0) return nodes;
+const calculateNodeDimensions = (node, viewMode = "detailed") => {
+  if (viewMode === "tree") {
+    // Fixed size for tree view - let Dagre handle all spacing
+    return { width: 180, height: 60 };
+  }
 
-  // Calculate the bounds of the layout
-  const bounds = nodes.reduce(
-    (acc, node) => ({
-      minX: Math.min(acc.minX, node.position.x),
-      maxX: Math.max(acc.maxX, node.position.x),
-      minY: Math.min(acc.minY, node.position.y),
-      maxY: Math.max(acc.maxY, node.position.y)
-    }),
-    { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
+  // Dynamic sizing for detailed view with limits
+  const maxWidth = 250; // Maximum width
+  const minWidth = 200;
+  const headerHeight = 50;
+  const fieldHeight = 45;
+  const maxVisibleFields = 3; // Maximum fields to show before truncating
+  const padding = 20;
+
+  const fields = node.data?.fields || [];
+  const visibleFieldCount = Math.min(fields.length, maxVisibleFields);
+
+  // Add extra row for "..." if there are hidden fields
+  const extraRowForTruncation = fields.length > maxVisibleFields ? 1 : 0;
+  const height =
+    headerHeight + (visibleFieldCount + extraRowForTruncation) * fieldHeight + padding;
+
+  // Calculate width based on content length with limits
+  const title = node.data?.title || "";
+  const maxFieldLength = Math.max(
+    ...fields.map((f) => Math.min((f.name + f.type).length, 20)) // Limit field length for width calc
   );
+  const maxContentLength = Math.max(
+    Math.min(title.length, 20), // Limit title length for width calc
+    maxFieldLength
+  );
+  const calculatedWidth = Math.max(minWidth, maxContentLength * 9 + 50);
+  const width = Math.min(calculatedWidth, maxWidth); // Enforce max width
 
-  // Calculate the center of the layout
-  const centerX = (bounds.minX + bounds.maxX) / 2;
-  const centerY = (bounds.minY + bounds.maxY) / 2;
+  return { width, height };
+};
 
-  // Apply offset to center around origin (0, 0)
-  return nodes.map((node) => ({
-    ...node,
-    position: {
-      x: node.position.x - centerX,
-      y: node.position.y - centerY
-    }
-  }));
+/**
+ * Apply Dagre layout to nodes and edges
+ * @param {Array} nodes - Array of nodes
+ * @param {Array} edges - Array of edges
+ * @param {string} direction - Layout direction ('TB', 'LR', 'BT', 'RL')
+ * @param {string} viewMode - 'tree' or 'detailed' for sizing strategy
+ * @returns {Object} Object with layouted nodes and edges
+ */
+const getLayoutedElements = (nodes, edges, direction = "TB", viewMode = "detailed") => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+  // Configure graph with spacing - less spacing needed for tree view with uniform sizes
+  const spacing =
+    viewMode === "tree"
+      ? { nodesep: 50, ranksep: 80, marginx: 20, marginy: 20 }
+      : { nodesep: 80, ranksep: 150, marginx: 30, marginy: 30 };
+
+  dagreGraph.setGraph({
+    rankdir: direction,
+    ...spacing
+  });
+
+  // Add nodes to dagre graph with calculated dimensions
+  nodes.forEach((node) => {
+    const dimensions = calculateNodeDimensions(node, viewMode);
+    dagreGraph.setNode(node.id, {
+      width: dimensions.width,
+      height: dimensions.height
+    });
+  });
+
+  // Add edges to dagre graph
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  // Calculate layout
+  dagre.layout(dagreGraph);
+
+  // Apply positions back to nodes
+  const layoutedNodes = nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    return {
+      ...node,
+      position: {
+        x: nodeWithPosition.x - nodeWithPosition.width / 2,
+        y: nodeWithPosition.y - nodeWithPosition.height / 2
+      }
+    };
+  });
+
+  return { nodes: layoutedNodes, edges };
 };
 
 /**
@@ -161,60 +226,63 @@ export const generateTreeLayout = (context, language = "eng", rootLabel = "Root"
     return { nodes: [], edges: [] };
   }
 
-  // Create D3 hierarchy with consistent spacing
-  const root = hierarchy(rootData);
-  const layout = tree();
-  const treeLayout = layout
-    .nodeSize([200, 120]) // More compact node sizing
-    .separation((a, b) => (a.parent === b.parent ? 1.0 : 1.5)); // Tighter separation
-
-  const treeData = treeLayout(root);
-
-  // Convert to ReactFlow nodes and edges
+  // Build nodes for Dagre layout
   const nodes = [];
   const edges = [];
 
-  treeData.each((d) => {
-    const nodeLabel = d.data.name;
+  // Process nodes recursively to build flat structure for Dagre
+  const processNodeForDagre = (nodeData, processedIds = new Set()) => {
+    if (!nodeData || processedIds.has(nodeData.id)) return;
+    processedIds.add(nodeData.id);
 
+    const nodeLabel = nodeData.name;
+
+    // Add node to nodes array
     nodes.push({
-      id: d.data.id,
-      position: {
-        x: d.x,
-        y: d.y
-      },
+      id: nodeData.id,
       data: {
-        label: nodeLabel
+        label: nodeLabel,
+        title: nodeLabel,
+        fields: []
       },
       type:
-        d.data.type === "placeholder"
+        nodeData.type === "placeholder"
           ? "placeholderNode"
-          : d.data.type === "root"
+          : nodeData.type === "root"
             ? "input"
             : "default",
-      className: d.data.type
+      className: nodeData.type
     });
 
-    // Create edge to parent (if not root)
-    if (d.parent) {
-      edges.push({
-        id: `${d.parent.data.id}-${d.data.id}`,
-        source: d.parent.data.id,
-        target: d.data.id,
-        type: "default",
-        animated: d.data.type === "placeholder",
-        style: {
-          stroke: "#999",
-          strokeWidth: 1
-        }
+    // Process children and create edges
+    if (nodeData.children) {
+      nodeData.children.forEach((child) => {
+        // Add edge from parent to child
+        edges.push({
+          id: `${nodeData.id}-${child.id}`,
+          source: nodeData.id,
+          target: child.id,
+          type: "default",
+          animated: child.type === "placeholder",
+          style: {
+            stroke: "#999",
+            strokeWidth: 1
+          }
+        });
+
+        // Recursively process child
+        processNodeForDagre(child, processedIds);
       });
     }
-  });
+  };
 
-  // Center the layout around origin
-  const centeredNodes = centerLayout(nodes);
+  // Start processing from root
+  processNodeForDagre(rootData);
 
-  return { nodes: centeredNodes, edges };
+  // Apply Dagre layout (Top-Bottom for tree view)
+  const layoutedElements = getLayoutedElements(nodes, edges, "TB", "tree");
+
+  return { nodes: layoutedElements.nodes, edges: layoutedElements.edges };
 };
 
 /**
@@ -249,12 +317,13 @@ export const generateDetailedLayout = (context, language = "eng", rootLabel = "R
   const processNode = (nodeId, nodeType, title, fields, level = 0) => {
     if (allNodes.has(nodeId)) return;
 
+    // No more field processing here - handled in UI component
     allNodes.set(nodeId, {
       id: nodeId,
       type: "detailedLR",
       data: {
         title,
-        fields,
+        fields, // Raw fields - truncation handled in UI
         nodeType
       },
       level
@@ -262,8 +331,8 @@ export const generateDetailedLayout = (context, language = "eng", rootLabel = "R
 
     // Process references in this node's fields
     fields.forEach((field) => {
-      if (field.isReference && field.originalValue.startsWith("refs:")) {
-        const referencedId = field.originalValue.replace("refs:", "");
+      if (field.isReference && field.type.startsWith("refs:")) {
+        const referencedId = field.type.replace("refs:", "");
         const referencedInfo = getDependencyInfo(referencedId, dependencyMap, language);
 
         processNode(
@@ -281,7 +350,7 @@ export const generateDetailedLayout = (context, language = "eng", rootLabel = "R
           target: referencedId
         });
       } else if (field.isPlaceholder) {
-        const placeholderId = `placeholder-${nodeId}-${field.originalKey}`;
+        const placeholderId = `placeholder-${nodeId}-${field.originalName}`;
 
         processNode(placeholderId, "placeholder", field.name, [], level + 1);
 
@@ -299,37 +368,14 @@ export const generateDetailedLayout = (context, language = "eng", rootLabel = "R
   const rootFields = processAttributes(attributes, schemaData.labels);
   processNode("root", "root", rootLabel, rootFields, 0);
 
-  // Convert to ReactFlow format and position nodes using left-to-right layout
+  // Convert allNodes Map to array for Dagre
   const nodes = [];
-  const nodesByLevel = new Map();
-
-  // Group nodes by level
   allNodes.forEach((node) => {
-    if (!nodesByLevel.has(node.level)) {
-      nodesByLevel.set(node.level, []);
-    }
-    nodesByLevel.get(node.level).push(node);
+    nodes.push(node);
   });
 
-  // Position nodes (left-to-right layout)
-  const xOffset = 0;
-  nodesByLevel.forEach((levelNodes, level) => {
-    const ySpacing = 300;
-    const startY = (-(levelNodes.length - 1) * ySpacing) / 2;
+  // Apply Dagre layout (Left-Right for detailed view)
+  const layoutedElements = getLayoutedElements(nodes, allEdges, "LR", "detailed");
 
-    levelNodes.forEach((node, index) => {
-      nodes.push({
-        ...node,
-        position: {
-          x: xOffset + level * 500,
-          y: startY + index * ySpacing
-        }
-      });
-    });
-  });
-
-  // Center the layout around origin using the same function as tree layout
-  const centeredNodes = centerLayout(nodes);
-
-  return { nodes: centeredNodes, edges: allEdges };
+  return { nodes: layoutedElements.nodes, edges: layoutedElements.edges };
 };

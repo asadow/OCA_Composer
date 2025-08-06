@@ -38,10 +38,13 @@ export const getRootSchemaInfo = () => ({
   labels: {}
 });
 
+// Field truncation constant
+const FIELD_NAME_MAX_LENGTH = 35;
+
 /**
- * Process attributes into field objects
- * @param {Object} attributes - Raw attributes object
- * @param {Object} labels - Label mapping
+ * Process attributes from schema and create field objects
+ * @param {Object} attributes - The attributes object from schema
+ * @param {Object} labels - Optional labels for field names
  * @returns {Array} Array of field objects
  */
 export const processAttributes = (attributes, labels = {}) => {
@@ -54,13 +57,23 @@ export const processAttributes = (attributes, labels = {}) => {
     const isReference = typeof value === "string" && value.startsWith("refs:");
     const isPlaceholder = typeof value === "string" && value.startsWith("refn:");
 
+    // Truncate field name if it's too long
+    const truncatedName =
+      fieldName.length > FIELD_NAME_MAX_LENGTH
+        ? `${fieldName.substring(0, FIELD_NAME_MAX_LENGTH)}...`
+        : fieldName;
+
     return {
-      name: fieldName,
-      type: isReference ? "Reference" : isPlaceholder ? "Placeholder" : value,
+      name: truncatedName,
+      originalName: fieldName,
+      type: value,
       isReference,
       isPlaceholder,
-      originalValue: value,
-      originalKey: key
+      tooltip: isReference
+        ? "Reference to another object"
+        : isPlaceholder
+          ? "Placeholder field"
+          : null
     };
   });
 };

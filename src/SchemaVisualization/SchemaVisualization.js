@@ -72,6 +72,7 @@ const SchemaVisualization = () => {
   const [viewSwitchLoading, setViewSwitchLoading] = useState(false);
   const [hasHierarchy, setHasHierarchy] = useState(false);
   const [loadedSchema, setLoadedSchema] = useState(null);
+  const [layoutTrigger, setLayoutTrigger] = useState(0); // Trigger for layout regeneration
 
   // ReactFlow instance ref
   const reactFlowInstanceRef = useRef(null);
@@ -94,10 +95,12 @@ const SchemaVisualization = () => {
 
   // Generate layout based on current view mode and language
   const generateLayout = useCallback(() => {
+    console.log("generateLayout called with viewMode:", viewMode);
     const currentSchema = loadedSchema || OCAPackage;
 
     if (!currentSchema) {
       // No schema available for layout generation
+      console.log("No schema available");
       return;
     }
 
@@ -107,6 +110,7 @@ const SchemaVisualization = () => {
 
     if (!mockContext) {
       // Failed to create mock context
+      console.log("Failed to create mock context");
       return;
     }
 
@@ -115,13 +119,21 @@ const SchemaVisualization = () => {
     try {
       if (viewMode === "tree") {
         // Generating tree layout
+        console.log("Generating tree layout");
         result = generateTreeLayout(mockContext, languageCode, t("Root"));
       } else {
         // Generating detailed layout
+        console.log("Generating detailed layout");
         result = generateDetailedLayout(mockContext, languageCode, t("Root"));
       }
 
       if (result && result.nodes && result.edges) {
+        console.log(
+          "Layout generated successfully, nodes:",
+          result.nodes.length,
+          "edges:",
+          result.edges.length
+        );
         setNodes(result.nodes);
         setEdges(result.edges);
 
@@ -135,22 +147,24 @@ const SchemaVisualization = () => {
         }
       } else {
         // Invalid layout result
+        console.log("Invalid layout result");
       }
     } catch (error) {
       // Error generating layout
+      console.log("Error generating layout:", error);
     }
-  }, [loadedSchema, OCAPackage, viewMode, viewSwitchLoading, t]);
+  }, [loadedSchema, OCAPackage, viewMode, viewSwitchLoading, layoutTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for i18next language changes and regenerate layout
   useEffect(() => {
     const handleLanguageChange = () => {
-      // Regenerate layout when language changes
-      generateLayout();
+      // Trigger layout regeneration by updating layoutTrigger
+      setLayoutTrigger((prev) => prev + 1);
     };
 
     i18next.on("languageChanged", handleLanguageChange);
     return () => i18next.off("languageChanged", handleLanguageChange);
-  }, [generateLayout]);
+  }, []); // Empty dependency array - no circular dependencies
 
   // Effect to handle file reading from navigation state
   useEffect(() => {
@@ -226,10 +240,12 @@ const SchemaVisualization = () => {
 
   // Handle view mode changes
   const handleViewModeChange = useCallback(() => {
+    console.log("View mode change clicked, current mode:", viewMode);
     // Start loading state
     setViewSwitchLoading(true);
 
     const nextMode = viewMode === "tree" ? "detailed" : "tree";
+    console.log("Switching to mode:", nextMode);
     setViewMode(nextMode);
 
     // Hide loading and trigger fit view after layout updates
