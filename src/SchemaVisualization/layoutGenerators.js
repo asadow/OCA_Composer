@@ -10,7 +10,7 @@ import {
 } from "./dataUtils";
 
 /**
- * Calculate node dimensions dynamically based on content
+ * Calculate node dimensions based on expected maximum content for consistent sizing
  * @param {Object} node - Node object with data
  * @param {string} viewMode - 'tree' or 'detailed' to determine sizing strategy
  * @returns {Object} Object with width and height properties
@@ -21,35 +21,36 @@ const calculateNodeDimensions = (node, viewMode = "detailed") => {
     return { width: 180, height: 60 };
   }
 
-  // Dynamic sizing for detailed view with limits
-  const maxWidth = 250; // Maximum width
-  const minWidth = 200;
+  // Fixed sizing for detailed view based on expected maximum content
+  const nodeType = node.data?.nodeType;
+
+  if (nodeType === "root") {
+    // Root nodes: assume max 8 fields (as per our limit)
+    const headerHeight = 50;
+    const fieldHeight = 45;
+    const maxFields = 8;
+    const padding = 20;
+
+    return {
+      width: 300, // Wider for root nodes
+      height: headerHeight + maxFields * fieldHeight + padding
+    };
+  }
+
+  // Non-root nodes: expect 3 references/placeholders + "...X more fields" indicator
   const headerHeight = 50;
   const fieldHeight = 45;
-  const maxVisibleFields = 3; // Maximum fields to show before truncating
+  const expectedVisibleFields = 3; // 3 refs/placeholders
+  const extraRowForTruncation = 1; // There might be a "...more fields" row
   const padding = 20;
 
-  const fields = node.data?.fields || [];
-  const visibleFieldCount = Math.min(fields.length, maxVisibleFields);
-
-  // Add extra row for "..." if there are hidden fields
-  const extraRowForTruncation = fields.length > maxVisibleFields ? 1 : 0;
-  const height =
-    headerHeight + (visibleFieldCount + extraRowForTruncation) * fieldHeight + padding;
-
-  // Calculate width based on content length with limits
-  const title = node.data?.title || "";
-  const maxFieldLength = Math.max(
-    ...fields.map((f) => Math.min((f.name + f.type).length, 20)) // Limit field length for width calc
-  );
-  const maxContentLength = Math.max(
-    Math.min(title.length, 20), // Limit title length for width calc
-    maxFieldLength
-  );
-  const calculatedWidth = Math.max(minWidth, maxContentLength * 9 + 50);
-  const width = Math.min(calculatedWidth, maxWidth); // Enforce max width
-
-  return { width, height };
+  return {
+    width: 250, // Fixed width for consistent layout
+    height:
+      headerHeight +
+      (expectedVisibleFields + extraRowForTruncation) * fieldHeight +
+      padding
+  };
 };
 
 /**
