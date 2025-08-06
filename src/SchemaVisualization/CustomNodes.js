@@ -90,10 +90,23 @@ export const DatabaseNode = ({ data, isConnectable }) => {
     return 0;
   });
 
-  // Limit number of visible fields to keep nodes manageable
-  const maxFields = nodeType === "root" ? 8 : 5;
-  const visibleFields = sortedFields.slice(0, maxFields);
-  const hiddenCount = sortedFields.length - maxFields;
+  // Separate references/placeholders from regular fields
+  const referencesAndPlaceholders = sortedFields.filter(
+    (field) => field.isReference || field.isPlaceholder
+  );
+  const regularFields = sortedFields.filter(
+    (field) => !field.isReference && !field.isPlaceholder
+  );
+
+  // Always show all references and placeholders, then add regular fields up to the limit
+  const maxRegularFields =
+    nodeType === "root"
+      ? Math.max(0, 8 - referencesAndPlaceholders.length)
+      : Math.max(0, 3 - referencesAndPlaceholders.length);
+  const visibleRegularFields = regularFields.slice(0, maxRegularFields);
+
+  const visibleFields = [...referencesAndPlaceholders, ...visibleRegularFields];
+  const hiddenCount = regularFields.length - visibleRegularFields.length;
 
   // Prepare tooltip content for truncated fields
   const truncatedFields = visibleFields.filter((field) => {
@@ -101,57 +114,59 @@ export const DatabaseNode = ({ data, isConnectable }) => {
     return originalName.length > FIELD_NAME_MAX_LENGTH;
   });
 
+  // Only show toolbar if there's actually content to display
+  const showToolbar = truncatedFields.length > 0 || hiddenCount > 0;
+
   return (
     <>
-      <NodeToolbar
-        isVisible={data.forceToolbarVisible || undefined}
-        position={Position.Top}
-        style={{
-          background: "rgba(0, 0, 0, 0.9)",
-          color: "white",
-          padding: "8px 12px",
-          borderRadius: "6px",
-          fontSize: "12px",
-          maxWidth: "400px",
-          whiteSpace: "pre-line"
-        }}
-      >
-        {truncatedFields.length > 0 && (
-          <div style={{ marginBottom: "8px" }}>
-            <strong>Full field names:</strong>
-            {truncatedFields.map((field) => (
-              <div key={field.originalName || field.name}>
-                • {field.originalName || field.name} (
-                {field.isReference
-                  ? "Reference"
-                  : field.isPlaceholder
-                    ? "Placeholder"
-                    : field.type}
-                )
-              </div>
-            ))}
-          </div>
-        )}
-        {hiddenCount > 0 && (
-          <div>
-            <strong>Hidden fields ({hiddenCount}):</strong>
-            {sortedFields.slice(maxFields).map((field) => (
-              <div key={field.originalName || field.name}>
-                • {field.originalName || field.name} (
-                {field.isReference
-                  ? "Reference"
-                  : field.isPlaceholder
-                    ? "Placeholder"
-                    : field.type}
-                )
-              </div>
-            ))}
-          </div>
-        )}
-        {truncatedFields.length === 0 && hiddenCount === 0 && (
-          <div>All fields visible</div>
-        )}
-      </NodeToolbar>
+      {showToolbar && (
+        <NodeToolbar
+          isVisible={data.forceToolbarVisible || undefined}
+          position={Position.Top}
+          style={{
+            background: "rgba(0, 0, 0, 0.9)",
+            color: "white",
+            padding: "8px 12px",
+            borderRadius: "6px",
+            fontSize: "12px",
+            maxWidth: "400px",
+            whiteSpace: "pre-line"
+          }}
+        >
+          {truncatedFields.length > 0 && (
+            <div style={{ marginBottom: "8px" }}>
+              <strong>Full field names:</strong>
+              {truncatedFields.map((field) => (
+                <div key={field.originalName || field.name}>
+                  • {field.originalName || field.name} (
+                  {field.isReference
+                    ? "Reference"
+                    : field.isPlaceholder
+                      ? "Placeholder"
+                      : field.type}
+                  )
+                </div>
+              ))}
+            </div>
+          )}
+          {hiddenCount > 0 && (
+            <div>
+              <strong>Hidden fields ({hiddenCount}):</strong>
+              {regularFields.slice(maxRegularFields).map((field) => (
+                <div key={field.originalName || field.name}>
+                  • {field.originalName || field.name} (
+                  {field.isReference
+                    ? "Reference"
+                    : field.isPlaceholder
+                      ? "Placeholder"
+                      : field.type}
+                  )
+                </div>
+              ))}
+            </div>
+          )}
+        </NodeToolbar>
+      )}
 
       <div className={`detailed-node ${nodeType}`}>
         {/* Only show input handle for non-root nodes */}
