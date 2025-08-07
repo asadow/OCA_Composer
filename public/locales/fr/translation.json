@@ -11,6 +11,7 @@
   "Database": "Détaillé", 
   "Detailed": "Détaillé",
   "Root": "Racine",
+  "Parent Schema": "Schéma Parent",
   "Switch to Database View": "Basculer vers la vue détaillée",
   "Switch to Detailed View": "Basculer vers la vue détaillée", 
   "Switch to Tree View": "Basculer vers la vue arbre",

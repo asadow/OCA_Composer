@@ -120,11 +120,11 @@ const SchemaVisualization = () => {
       if (viewMode === "tree") {
         // Generating tree layout
         console.log("Generating tree layout");
-        result = generateTreeLayout(mockContext, languageCode, t("Root"));
+        result = generateTreeLayout(mockContext, languageCode, t("Parent Schema"));
       } else {
         // Generating detailed layout
         console.log("Generating detailed layout");
-        result = generateDetailedLayout(mockContext, languageCode, t("Root"));
+        result = generateDetailedLayout(mockContext, languageCode, t("Parent Schema"));
       }
 
       if (result && result.nodes && result.edges) {
@@ -430,28 +430,6 @@ const SchemaVisualization = () => {
               <MiniMap nodeStrokeColor="#666" nodeColor="#fff" nodeBorderRadius={4} />
               <Background variant="dots" gap={12} size={1} />
             </ReactFlow>
-          )}
-
-          {/* No Hierarchy Message */}
-          {!hasHierarchy && (
-            <Box
-              sx={{
-                position: "absolute",
-                bottom: 20,
-                left: 20,
-                background: "rgba(255, 255, 255, 0.9)",
-                padding: 2,
-                borderRadius: 1,
-                boxShadow: 2,
-                maxWidth: 300
-              }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                {t(
-                  "This schema does not contain hierarchical references. The visualization shows the basic structure."
-                )}
-              </Typography>
-            </Box>
           )}
         </Box>
       </Box>

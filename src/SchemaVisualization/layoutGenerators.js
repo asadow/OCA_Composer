@@ -37,10 +37,10 @@ const calculateNodeDimensions = (node, viewMode = "detailed") => {
     };
   }
 
-  // Non-root nodes: expect 3 references/placeholders + "...X more fields" indicator
+  // Non-root nodes: expect 3 child schemas/placeholder child schemas + "...X more fields" indicator
   const headerHeight = 50;
   const fieldHeight = 45;
-  const expectedVisibleFields = 3; // 3 refs/placeholders
+  const expectedVisibleFields = 3; // 3 child schemas/placeholder child schemas
   const extraRowForTruncation = 1; // There might be a "...more fields" row
   const padding = 20;
 
@@ -115,7 +115,11 @@ const getLayoutedElements = (nodes, edges, direction = "TB", viewMode = "detaile
  * @param {string} rootLabel - Translated label for the root node
  * @returns {Object} Object containing nodes and edges arrays
  */
-export const generateTreeLayout = (context, language = "eng", rootLabel = "Root") => {
+export const generateTreeLayout = (
+  context,
+  language = "eng",
+  rootLabel = "Parent Schema"
+) => {
   // Check if we have processed schema data or need to extract from context
   let schemaData;
   if (context.OCAPackage && context.bundle && context.dependencies) {
@@ -161,7 +165,7 @@ export const generateTreeLayout = (context, language = "eng", rootLabel = "Root"
       children: []
     };
 
-    // Process all attributes to find references and placeholders
+    // Process all attributes to find child schemas and placeholder child schemas
     Object.entries(nodeAttributes).forEach(([key, value]) => {
       const isRefs = typeof value === "string" && value.startsWith("refs:");
       const isRefn = typeof value === "string" && value.startsWith("refn:");
@@ -204,7 +208,7 @@ export const generateTreeLayout = (context, language = "eng", rootLabel = "Root"
       } else if (isRefn) {
         nodeData.children.push({
           id: `placeholder-${nodeId}-${key}`,
-          name: `${labels[key] || key}\n(placeholder)`,
+          name: `${labels[key] || key}\n(placeholder child schema)`,
           type: "placeholder",
           children: []
         });
@@ -277,7 +281,7 @@ export const generateTreeLayout = (context, language = "eng", rootLabel = "Root"
     }
   };
 
-  // Start processing from root
+  // Start processing from parent
   processNodeForDagre(rootData);
 
   // Apply Dagre layout (Top-Bottom for tree view)
@@ -293,7 +297,11 @@ export const generateTreeLayout = (context, language = "eng", rootLabel = "Root"
  * @param {string} rootLabel - Translated label for the root node
  * @returns {Object} Object containing nodes and edges arrays
  */
-export const generateDetailedLayout = (context, language = "eng", rootLabel = "Root") => {
+export const generateDetailedLayout = (
+  context,
+  language = "eng",
+  rootLabel = "Parent Schema"
+) => {
   // Check if we have processed schema data or need to extract from context
   let schemaData;
   if (context.OCAPackage && context.bundle && context.dependencies) {
@@ -330,7 +338,7 @@ export const generateDetailedLayout = (context, language = "eng", rootLabel = "R
       level
     });
 
-    // Process references in this node's fields
+    // Process child schemas in this node's fields
     fields.forEach((field) => {
       if (field.isReference && field.type.startsWith("refs:")) {
         const referencedId = field.type.replace("refs:", "");
@@ -365,7 +373,7 @@ export const generateDetailedLayout = (context, language = "eng", rootLabel = "R
     });
   };
 
-  // Start with root node
+  // Start with parent node
   const rootFields = processAttributes(attributes, schemaData.labels);
   processNode("root", "root", rootLabel, rootFields, 0);
 

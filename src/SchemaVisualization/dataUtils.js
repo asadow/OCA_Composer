@@ -29,7 +29,7 @@ export const createDependencyMap = (dependencies) => {
 
 /**
  * Get root schema information from OCA package
- * @returns {Object} Root schema info including attributes, dependencies, and labels
+ * @returns {Object} Parent schema info including attributes, dependencies, and labels
  */
 export const getRootSchemaInfo = () => ({
   attributes: {},
@@ -70,9 +70,9 @@ export const processAttributes = (attributes, labels = {}) => {
       isReference,
       isPlaceholder,
       tooltip: isReference
-        ? "Reference to another object"
+        ? "Child Schema reference"
         : isPlaceholder
-          ? "Placeholder field"
+          ? "Placeholder Child Schema field"
           : null
     };
   });

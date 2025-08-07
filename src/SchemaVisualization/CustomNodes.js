@@ -21,13 +21,13 @@ export const PlaceholderNode = ({ data, isConnectable }) => (
     />
     <div className="placeholder-node-content">
       <div className="placeholder-icon">📝</div>
-      <div className="placeholder-label">{data.label || "Placeholder"}</div>
+      <div className="placeholder-label">{data.label || "Placeholder Child Schema"}</div>
     </div>
   </div>
 );
 
 /**
- * Reference Node Component - represents references to other schemas
+ * Reference Node Component - represents child schemas
  */
 export const ReferenceNode = ({ data, isConnectable }) => (
   <div className="reference-node">
@@ -39,8 +39,8 @@ export const ReferenceNode = ({ data, isConnectable }) => (
     />
     <div className="reference-node-content">
       <div className="reference-icon">🔗</div>
-      <div className="reference-label">{data.label || "Reference"}</div>
-      <div className="reference-type">Reference</div>
+      <div className="reference-label">{data.label || "Child Schema"}</div>
+      <div className="reference-type">Child Schema</div>
     </div>
     <Handle
       type="source"
@@ -58,8 +58,8 @@ export const RootNode = ({ data, isConnectable }) => (
   <div className="root-node">
     <div className="root-node-content">
       <div className="root-icon">🏠</div>
-      <div className="root-label">{data.label || "Root Schema"}</div>
-      <div className="root-type">Main Schema</div>
+      <div className="root-label">{data.label || "Parent Schema"}</div>
+      <div className="root-type">Parent Schema</div>
     </div>
     <Handle
       type="source"
@@ -76,7 +76,7 @@ export const RootNode = ({ data, isConnectable }) => (
 export const DatabaseNode = ({ data, isConnectable }) => {
   const { title, fields = [], nodeType } = data;
 
-  // Sort fields to prioritize references and placeholders first
+  // Sort fields to prioritize child schemas and placeholder child schemas first
   const sortedFields = [...fields].sort((a, b) => {
     // References come first
     if (a.isReference && !b.isReference) return -1;
@@ -90,7 +90,7 @@ export const DatabaseNode = ({ data, isConnectable }) => {
     return 0;
   });
 
-  // Separate references/placeholders from regular fields
+  // Separate child schemas/placeholder child schemas from regular fields
   const referencesAndPlaceholders = sortedFields.filter(
     (field) => field.isReference || field.isPlaceholder
   );
@@ -98,7 +98,7 @@ export const DatabaseNode = ({ data, isConnectable }) => {
     (field) => !field.isReference && !field.isPlaceholder
   );
 
-  // Always show all references and placeholders, then add regular fields up to the limit
+  // Always show all child schemas and placeholder child schemas, then add regular fields up to the limit
   const maxRegularFields =
     nodeType === "root"
       ? Math.max(0, 8 - referencesAndPlaceholders.length)
@@ -140,9 +140,9 @@ export const DatabaseNode = ({ data, isConnectable }) => {
                 <div key={field.originalName || field.name}>
                   • {field.originalName || field.name} (
                   {field.isReference
-                    ? "Reference"
+                    ? "Child Schema"
                     : field.isPlaceholder
-                      ? "Placeholder"
+                      ? "Placeholder Child Schema"
                       : field.type}
                   )
                 </div>
@@ -156,9 +156,9 @@ export const DatabaseNode = ({ data, isConnectable }) => {
                 <div key={field.originalName || field.name}>
                   • {field.originalName || field.name} (
                   {field.isReference
-                    ? "Reference"
+                    ? "Child Schema"
                     : field.isPlaceholder
-                      ? "Placeholder"
+                      ? "Placeholder Child Schema"
                       : field.type}
                   )
                 </div>
@@ -204,9 +204,9 @@ export const DatabaseNode = ({ data, isConnectable }) => {
                 </span>
                 <span className="field-type">
                   {field.isReference
-                    ? "Reference"
+                    ? "Child Schema"
                     : field.isPlaceholder
-                      ? "Placeholder"
+                      ? "Placeholder Child Schema"
                       : field.type}
                 </span>
                 {field.isReference && (
