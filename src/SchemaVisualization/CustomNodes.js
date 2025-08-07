@@ -8,17 +8,36 @@ import "./SchemaVisualization.css";
 // Constants
 const FIELD_NAME_MAX_LENGTH = 35;
 
+// Helper function to get display type for fields
+const getFieldDisplayType = (field) => {
+  if (field.isReference) return "Child Schema";
+  if (field.isPlaceholder) return "Placeholder Child Schema";
+  return field.type;
+};
+
+// Helper component for field handles
+const FieldHandle = ({ field }) => (
+  <Handle
+    type="source"
+    position={Position.Right}
+    id={`${field.originalName || field.name}`}
+    style={{
+      right: "-7px",
+      top: "50%",
+      background: "#ccc",
+      border: "1px solid white",
+      width: "10px",
+      height: "10px"
+    }}
+  />
+);
+
 /**
  * Placeholder Node Component - represents potential extension points
  */
-export const PlaceholderNode = ({ data, isConnectable }) => (
+export const PlaceholderNode = ({ data }) => (
   <div className="placeholder-node">
-    <Handle
-      type="target"
-      position={Position.Top}
-      isConnectable={isConnectable}
-      style={{ background: "#ddd" }}
-    />
+    <Handle type="target" position={Position.Top} />
     <div className="placeholder-node-content">
       <div className="placeholder-icon">📝</div>
       <div className="placeholder-label">{data.label || "Placeholder Child Schema"}</div>
@@ -27,53 +46,9 @@ export const PlaceholderNode = ({ data, isConnectable }) => (
 );
 
 /**
- * Reference Node Component - represents child schemas
- */
-export const ReferenceNode = ({ data, isConnectable }) => (
-  <div className="reference-node">
-    <Handle
-      type="target"
-      position={Position.Top}
-      isConnectable={isConnectable}
-      style={{ background: "#4CAF50" }}
-    />
-    <div className="reference-node-content">
-      <div className="reference-icon">🔗</div>
-      <div className="reference-label">{data.label || "Child Schema"}</div>
-      <div className="reference-type">Child Schema</div>
-    </div>
-    <Handle
-      type="source"
-      position={Position.Bottom}
-      isConnectable={isConnectable}
-      style={{ background: "#4CAF50" }}
-    />
-  </div>
-);
-
-/**
- * Root Node Component - represents the main schema
- */
-export const RootNode = ({ data, isConnectable }) => (
-  <div className="root-node">
-    <div className="root-node-content">
-      <div className="root-icon">🏠</div>
-      <div className="root-label">{data.label || "Parent Schema"}</div>
-      <div className="root-type">Parent Schema</div>
-    </div>
-    <Handle
-      type="source"
-      position={Position.Bottom}
-      isConnectable={isConnectable}
-      style={{ background: "#2196F3" }}
-    />
-  </div>
-);
-
-/**
  * Detailed Node Component - represents schema entities with fields in left-to-right layout
  */
-export const DatabaseNode = ({ data, isConnectable }) => {
+export const DetailedNode = ({ data }) => {
   const { title, fields = [], nodeType } = data;
 
   // Sort fields to prioritize child schemas and placeholder child schemas first
@@ -91,7 +66,7 @@ export const DatabaseNode = ({ data, isConnectable }) => {
   });
 
   // Separate child schemas/placeholder child schemas from regular fields
-  const referencesAndPlaceholders = sortedFields.filter(
+  const childSchemas = sortedFields.filter(
     (field) => field.isReference || field.isPlaceholder
   );
   const regularFields = sortedFields.filter(
@@ -101,12 +76,12 @@ export const DatabaseNode = ({ data, isConnectable }) => {
   // Always show all child schemas and placeholder child schemas, then add regular fields up to the limit
   const maxRegularFields =
     nodeType === "root"
-      ? Math.max(0, 8 - referencesAndPlaceholders.length)
-      : Math.max(0, 3 - referencesAndPlaceholders.length);
+      ? Math.max(0, 8 - childSchemas.length)
+      : Math.max(0, 3 - childSchemas.length);
   const visibleRegularFields = regularFields.slice(0, maxRegularFields);
 
-  const visibleFields = [...referencesAndPlaceholders, ...visibleRegularFields];
-  const hiddenCount = regularFields.length - visibleRegularFields.length;
+  const visibleFields = [...childSchemas, ...visibleRegularFields];
+  const hiddenFieldsCount = regularFields.length - visibleRegularFields.length;
 
   // Prepare tooltip content for truncated fields
   const truncatedFields = visibleFields.filter((field) => {
@@ -115,7 +90,7 @@ export const DatabaseNode = ({ data, isConnectable }) => {
   });
 
   // Only show toolbar if there's actually content to display
-  const showToolbar = truncatedFields.length > 0 || hiddenCount > 0;
+  const showToolbar = truncatedFields.length > 0 || hiddenFieldsCount > 0;
 
   return (
     <>
@@ -138,29 +113,17 @@ export const DatabaseNode = ({ data, isConnectable }) => {
               <strong>Full field names:</strong>
               {truncatedFields.map((field) => (
                 <div key={field.originalName || field.name}>
-                  • {field.originalName || field.name} (
-                  {field.isReference
-                    ? "Child Schema"
-                    : field.isPlaceholder
-                      ? "Placeholder Child Schema"
-                      : field.type}
-                  )
+                  • {field.originalName || field.name} ({getFieldDisplayType(field)})
                 </div>
               ))}
             </div>
           )}
-          {hiddenCount > 0 && (
+          {hiddenFieldsCount > 0 && (
             <div>
-              <strong>Hidden fields ({hiddenCount}):</strong>
+              <strong>Hidden fields ({hiddenFieldsCount}):</strong>
               {regularFields.slice(maxRegularFields).map((field) => (
                 <div key={field.originalName || field.name}>
-                  • {field.originalName || field.name} (
-                  {field.isReference
-                    ? "Child Schema"
-                    : field.isPlaceholder
-                      ? "Placeholder Child Schema"
-                      : field.type}
-                  )
+                  • {field.originalName || field.name} ({getFieldDisplayType(field)})
                 </div>
               ))}
             </div>
@@ -171,12 +134,7 @@ export const DatabaseNode = ({ data, isConnectable }) => {
       <div className={`detailed-node ${nodeType}`}>
         {/* Only show input handle for non-root nodes */}
         {nodeType !== "root" && (
-          <Handle
-            type="target"
-            position={Position.Left}
-            isConnectable={isConnectable}
-            style={{ top: "20px" }}
-          />
+          <Handle type="target" position={Position.Left} style={{ top: "20px" }} />
         )}
 
         <div className="detailed-header">{title}</div>
@@ -198,55 +156,19 @@ export const DatabaseNode = ({ data, isConnectable }) => {
                     cursor: isLong ? "help" : "default",
                     textDecoration: isLong ? "underline dotted" : "none"
                   }}
-                  title={isLong ? "Select node to see full name" : ""}
                 >
                   {fieldName}
                 </span>
-                <span className="field-type">
-                  {field.isReference
-                    ? "Child Schema"
-                    : field.isPlaceholder
-                      ? "Placeholder Child Schema"
-                      : field.type}
-                </span>
-                {field.isReference && (
-                  <Handle
-                    type="source"
-                    position={Position.Right}
-                    id={`${field.originalName || field.name}`}
-                    isConnectable={isConnectable}
-                    style={{
-                      right: "-7px",
-                      top: "50%",
-                      background: "#ccc",
-                      border: "1px solid white",
-                      width: "10px",
-                      height: "10px"
-                    }}
-                  />
-                )}
-                {field.isPlaceholder && (
-                  <Handle
-                    type="source"
-                    position={Position.Right}
-                    id={`${field.originalName || field.name}`}
-                    isConnectable={isConnectable}
-                    style={{
-                      right: "-7px",
-                      top: "50%",
-                      background: "#ccc",
-                      border: "1px solid white",
-                      width: "10px",
-                      height: "10px"
-                    }}
-                  />
+                <span className="field-type">{getFieldDisplayType(field)}</span>
+                {(field.isReference || field.isPlaceholder) && (
+                  <FieldHandle field={field} />
                 )}
               </div>
             );
           })}
 
           {/* Show hidden field count if there are any */}
-          {hiddenCount > 0 && (
+          {hiddenFieldsCount > 0 && (
             <div
               className="field hidden-fields-indicator"
               style={{ fontStyle: "italic", color: "#666" }}
@@ -259,7 +181,7 @@ export const DatabaseNode = ({ data, isConnectable }) => {
                 }}
                 title="Select node to see hidden fields"
               >
-                ... {hiddenCount} more field{hiddenCount > 1 ? "s" : ""}
+                ... {hiddenFieldsCount} more field{hiddenFieldsCount > 1 ? "s" : ""}
               </span>
               <span className="field-type" />
             </div>

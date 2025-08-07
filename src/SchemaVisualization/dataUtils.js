@@ -68,12 +68,7 @@ export const processAttributes = (attributes, labels = {}) => {
       originalName: fieldName,
       type: value,
       isReference,
-      isPlaceholder,
-      tooltip: isReference
-        ? "Child Schema reference"
-        : isPlaceholder
-          ? "Placeholder Child Schema field"
-          : null
+      isPlaceholder
     };
   });
 };

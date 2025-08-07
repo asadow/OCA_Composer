@@ -22,7 +22,7 @@ import { Context } from "../App";
 import Header from "../Header/Header";
 import Footer from "../Footer/Footer";
 import { CustomPalette } from "../constants/customPalette";
-import { PlaceholderNode, ReferenceNode, RootNode, DatabaseNode } from "./CustomNodes";
+import { PlaceholderNode, DetailedNode } from "./CustomNodes";
 import { generateTreeLayout, generateDetailedLayout } from "./layoutGenerators";
 import { hasHierarchicalStructure, extractSchemaDataFromPackage } from "./dataUtils";
 import "./SchemaVisualization.css";
@@ -30,9 +30,7 @@ import "./SchemaVisualization.css";
 // Custom node types for React Flow
 const nodeTypes = {
   placeholderNode: PlaceholderNode,
-  referenceNode: ReferenceNode,
-  rootNode: RootNode,
-  detailedLR: DatabaseNode
+  detailedLR: DetailedNode
 };
 
 // Update the language mapping to work with i18next language codes
@@ -422,6 +420,7 @@ const SchemaVisualization = () => {
                 reactFlowInstanceRef.current = instance;
               }}
               nodeTypes={nodeTypes}
+              nodesConnectable={false}
               fitView
               fitViewOptions={{ padding: 0.1 }}
               style={{ width: "100%", height: "100%" }}
