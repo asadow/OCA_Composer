@@ -225,12 +225,10 @@ const SchemaVisualization = () => {
 
   // Handle view mode changes
   const handleViewModeChange = useCallback(() => {
-    console.log("View mode change clicked, current mode:", viewMode);
     // Start loading state
     setViewSwitchLoading(true);
 
     const nextMode = viewMode === "tree" ? "detailed" : "tree";
-    console.log("Switching to mode:", nextMode);
     setViewMode(nextMode);
 
     // Hide loading and trigger fit view after layout updates

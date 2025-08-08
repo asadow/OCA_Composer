@@ -5,6 +5,33 @@ import dagre from "dagre";
 import { createDependencyMap, getDependencyInfo, processAttributes } from "./dataUtils";
 
 /**
+ * DATA STRUCTURE DOCUMENTATION
+ *
+ * Node Structure:
+ * Each node in the visualization has three distinct properties:
+ *
+ * - id: Unique technical identifier
+ *   - Used by Dagre for layout calculations and React Flow as unique key
+ *   - Must be globally unique across entire graph
+ *   - Examples: "root", "AddressSchema", "placeholder-root-contact"
+ *
+ * - name/title: Display label for users
+ *   - What users actually see on the node
+ *   - Can be human-readable and localized
+ *   - Examples: "Parent Schema", "Address Schema", "contact\n(placeholder child schema)"
+ *
+ * - type: Node behavior and rendering control
+ *   - Determines React Flow node type mapping and CSS classes
+ *   - Controls visual styling and rendering logic
+ *   - Values: "root", "reference", "placeholder"
+ *
+ * Layout Modes:
+ * - Tree Layout: Hierarchical parent-child structure, minimal node info, nested relationships
+ * - Detailed Layout: Flat network of detailed nodes, reference fields visible and connected by edges,
+ *   other fields visible on toggle
+ */
+
+/**
  * Calculate node dimensions based on expected maximum content for consistent sizing
  * @param {Object} node - Node object with data
  * @param {string} viewMode - 'tree' or 'detailed' to determine sizing strategy
@@ -12,11 +39,11 @@ import { createDependencyMap, getDependencyInfo, processAttributes } from "./dat
  */
 const calculateNodeDimensions = (node, viewMode = "detailed") => {
   if (viewMode === "tree") {
-    // Fixed size for tree view - let Dagre handle all spacing
+    // Simple fixed size for tree view - uniform sizing for clean hierarchy
     return { width: 180, height: 60 };
   }
 
-  // Fixed sizing for detailed view based on expected maximum content
+  // Complex sizing for detailed view based on expected content
   const nodeType = node.data?.nodeType;
 
   if (nodeType === "root") {
@@ -105,6 +132,12 @@ const getLayoutedElements = (nodes, edges, direction = "TB", viewMode = "detaile
 
 /**
  * Generate hierarchical tree layout nodes and edges
+ *
+ * Tree Layout Approach:
+ * - Uses recursive buildHierarchy function to create nested parent-child structure
+ * - Creates minimal nodes showing only schema names and parent-child relationships; no field information
+ * - No cycle detection needed as schema verification prevents cycles at earlier stage
+ *
  * @param {Object} schemaData - Processed schema data with attributes, dependencies, and overlays
  * @param {string} language - Language code for labels (e.g., "eng", "fra")
  * @param {string} rootLabel - Translated label for the root node
@@ -115,15 +148,13 @@ export const generateTreeLayout = (
   language = "eng",
   rootLabel = "Parent Schema"
 ) => {
-  // Expect standardized schema data format
-
+  // Expect attributes as we don't use viz where there is one root and no children
   if (!schemaData || !schemaData.attributes) {
     return { nodes: [], edges: [] };
   }
 
   const { attributes, dependencies, overlays } = schemaData;
   const dependencyMap = createDependencyMap(dependencies);
-  const processedNodes = new Set();
 
   // Get label overlay for attribute labels using the specified language
   const labelOverlay =
@@ -137,11 +168,6 @@ export const generateTreeLayout = (
     metaOverlay = null,
     nodeType
   }) => {
-    if (processedNodes.has(nodeId)) {
-      return null; // Already processed, avoid cycles
-    }
-    processedNodes.add(nodeId);
-
     const labels = nodeLabelOverlay?.attribute_labels || {};
     const nodeName = metaOverlay?.name ? metaOverlay.name : rootLabel;
 
@@ -161,7 +187,7 @@ export const generateTreeLayout = (
         const refId = value.replace("refs:", "");
         const refDep = dependencyMap[refId];
 
-        if (refDep && refDep.capture_base) {
+        if (refDep) {
           const refLabelOverlay =
             refDep.overlays?.label?.find((l) => l.language === language) ||
             refDep.overlays?.label?.[0];
@@ -169,27 +195,15 @@ export const generateTreeLayout = (
             refDep.overlays?.meta?.find((m) => m.language === language) ||
             refDep.overlays?.meta?.[0];
 
-          if (!processedNodes.has(refId)) {
-            const childNode = buildHierarchy({
-              nodeId: refId,
-              attributes: refDep.capture_base.attributes,
-              labelOverlay: refLabelOverlay,
-              metaOverlay: refMetaOverlay,
-              nodeType: "reference"
-            });
-            if (childNode) {
-              nodeData.children.push(childNode);
-            }
-          } else {
-            const nodeName = refMetaOverlay?.name || refId;
-            nodeData.children.push({
-              id: `${nodeId}-ref-${refId}`,
-              name: nodeName,
-              type: "reference",
-              children: [],
-              isSharedReference: true,
-              originalId: refId
-            });
+          const childNode = buildHierarchy({
+            nodeId: refId,
+            attributes: refDep.capture_base.attributes,
+            labelOverlay: refLabelOverlay,
+            metaOverlay: refMetaOverlay,
+            nodeType: "reference"
+          });
+          if (childNode) {
+            nodeData.children.push(childNode);
           }
         }
       } else if (isRefn) {
@@ -279,6 +293,14 @@ export const generateTreeLayout = (
 
 /**
  * Generate detailed-style left-to-right layout nodes and edges
+ *
+ * Detailed Layout Approach:
+ * - Uses non-recursive processNode function to create flat network of detailed nodes
+ * - Each node contains all its field information for detailed viewing
+ * - Edges connect from specific fields to referenced child schema nodes
+ * - sourceHandle identifies which field the connection originates from
+ * - Results in network where schemas are separate nodes connected by field-to-schema edges
+ *
  * @param {Object} schemaData - Processed schema data with attributes, dependencies, and overlays
  * @param {string} language - Language code for labels (e.g., "eng", "fra")
  * @param {string} rootLabel - Translated label for the root node
@@ -299,7 +321,6 @@ export const generateDetailedLayout = (
   const allNodes = new Map();
   const allEdges = [];
 
-  // Helper function to recursively process nodes and their dependencies
   const processNode = (nodeId, nodeType, title, fields, level = 0) => {
     if (allNodes.has(nodeId)) return;
 
