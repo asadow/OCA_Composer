@@ -24,7 +24,7 @@ import Footer from "../Footer/Footer";
 import { CustomPalette } from "../constants/customPalette";
 import { PlaceholderNode, DetailedNode } from "./CustomNodes";
 import { generateTreeLayout, generateDetailedLayout } from "./layoutGenerators";
-import { hasHierarchicalStructure, extractSchemaDataFromPackage } from "./dataUtils";
+import { extractSchemaDataFromPackage } from "./dataUtils";
 import "./SchemaVisualization.css";
 
 // Custom node types for React Flow
@@ -93,12 +93,10 @@ const SchemaVisualization = () => {
 
   // Generate layout based on current view mode and language
   const generateLayout = useCallback(() => {
-    console.log("generateLayout called with viewMode:", viewMode);
     const currentSchema = loadedSchema || OCAPackage;
 
     if (!currentSchema) {
       // No schema available for layout generation
-      console.log("No schema available");
       return;
     }
 
@@ -108,7 +106,6 @@ const SchemaVisualization = () => {
 
     if (!mockContext) {
       // Failed to create mock context
-      console.log("Failed to create mock context");
       return;
     }
 
@@ -117,21 +114,13 @@ const SchemaVisualization = () => {
     try {
       if (viewMode === "tree") {
         // Generating tree layout
-        console.log("Generating tree layout");
         result = generateTreeLayout(mockContext, languageCode, t("Parent Schema"));
       } else {
         // Generating detailed layout
-        console.log("Generating detailed layout");
         result = generateDetailedLayout(mockContext, languageCode, t("Parent Schema"));
       }
 
       if (result && result.nodes && result.edges) {
-        console.log(
-          "Layout generated successfully, nodes:",
-          result.nodes.length,
-          "edges:",
-          result.edges.length
-        );
         setNodes(result.nodes);
         setEdges(result.edges);
 
@@ -145,11 +134,9 @@ const SchemaVisualization = () => {
         }
       } else {
         // Invalid layout result
-        console.log("Invalid layout result");
       }
     } catch (error) {
       // Error generating layout
-      console.log("Error generating layout:", error);
     }
   }, [loadedSchema, OCAPackage, viewMode, viewSwitchLoading, layoutTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -214,8 +201,8 @@ const SchemaVisualization = () => {
 
     // If we have a schema, process it
     if (currentSchema) {
-      // Check if schema has hierarchical structure
-      const hasHierarchy = hasHierarchicalStructure(currentSchema);
+      const hasHierarchy =
+        currentSchema.dependencies && currentSchema.dependencies.length > 0;
       setHasHierarchy(hasHierarchy);
 
       if (!hasHierarchy) {

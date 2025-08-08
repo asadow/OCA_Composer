@@ -2,12 +2,7 @@
  * Layout generators for different visualization modes
  */
 import dagre from "dagre";
-import {
-  createDependencyMap,
-  getDependencyInfo,
-  processAttributes,
-  extractSchemaDataFromContext
-} from "./dataUtils";
+import { createDependencyMap, getDependencyInfo, processAttributes } from "./dataUtils";
 
 /**
  * Calculate node dimensions based on expected maximum content for consistent sizing
@@ -110,27 +105,19 @@ const getLayoutedElements = (nodes, edges, direction = "TB", viewMode = "detaile
 
 /**
  * Generate hierarchical tree layout nodes and edges
- * @param {Object} context - React context containing schema data OR processed schema data
+ * @param {Object} schemaData - Processed schema data with attributes, dependencies, and overlays
  * @param {string} language - Language code for labels (e.g., "eng", "fra")
  * @param {string} rootLabel - Translated label for the root node
  * @returns {Object} Object containing nodes and edges arrays
  */
 export const generateTreeLayout = (
-  context,
+  schemaData,
   language = "eng",
   rootLabel = "Parent Schema"
 ) => {
-  // Check if we have processed schema data or need to extract from context
-  let schemaData;
-  if (context.OCAPackage && context.bundle && context.dependencies) {
-    // Already processed schema data
-    schemaData = context;
-  } else {
-    // Extract from context
-    schemaData = extractSchemaDataFromContext(context);
-  }
+  // Expect standardized schema data format
 
-  if (!schemaData) {
+  if (!schemaData || !schemaData.attributes) {
     return { nodes: [], edges: [] };
   }
 
@@ -292,27 +279,17 @@ export const generateTreeLayout = (
 
 /**
  * Generate detailed-style left-to-right layout nodes and edges
- * @param {Object} context - React context containing schema data
+ * @param {Object} schemaData - Processed schema data with attributes, dependencies, and overlays
  * @param {string} language - Language code for labels (e.g., "eng", "fra")
  * @param {string} rootLabel - Translated label for the root node
  * @returns {Object} Object containing nodes and edges arrays
  */
 export const generateDetailedLayout = (
-  context,
+  schemaData,
   language = "eng",
   rootLabel = "Parent Schema"
 ) => {
-  // Check if we have processed schema data or need to extract from context
-  let schemaData;
-  if (context.OCAPackage && context.bundle && context.dependencies) {
-    // Already processed schema data
-    schemaData = context;
-  } else {
-    // Extract from context
-    schemaData = extractSchemaDataFromContext(context);
-  }
-
-  if (!schemaData) {
+  if (!schemaData || !schemaData.attributes) {
     return { nodes: [], edges: [] };
   }
 

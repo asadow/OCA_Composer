@@ -8,35 +8,14 @@
  * @returns {Object} Map of dependency IDs to dependency objects
  */
 export const createDependencyMap = (dependencies) => {
-  if (!dependencies || !Array.isArray(dependencies)) {
-    return {};
-  }
-
   const depMap = {};
   dependencies.forEach((dep) => {
-    // Check different dependency structures
-    if (dep.oca_bundle?.bundle) {
-      // Structure: { oca_bundle: { bundle: {...} } }
-      depMap[dep.d || dep.id] = dep.oca_bundle.bundle;
-    } else if (dep.capture_base) {
-      // Structure: { capture_base: {...}, overlays: {...} }
-      depMap[dep.d || dep.id] = dep;
-    }
+    // Dependencies have flat structure: { capture_base: {...}, overlays: {...} }
+    depMap[dep.d || dep.id] = dep;
   });
 
   return depMap;
 };
-
-/**
- * Get root schema information from OCA package
- * @returns {Object} Parent schema info including attributes, dependencies, and labels
- */
-export const getRootSchemaInfo = () => ({
-  attributes: {},
-  dependencies: [],
-  labelOverlay: null,
-  labels: {}
-});
 
 // Field truncation constant
 const FIELD_NAME_MAX_LENGTH = 35;
@@ -111,35 +90,6 @@ export const getDependencyInfo = (depId, dependencyMap, language = "eng") => {
 };
 
 /**
- * Check if an OCA package has hierarchical structure (dependencies)
- * @param {Object} ocaPackage - OCA package object
- * @returns {boolean} True if package has dependencies
- */
-export const hasHierarchicalStructure = (ocaPackage) => {
-  if (!ocaPackage) return false;
-
-  // Check for dependencies array
-  if (
-    ocaPackage.dependencies &&
-    Array.isArray(ocaPackage.dependencies) &&
-    ocaPackage.dependencies.length > 0
-  ) {
-    return true;
-  }
-
-  // Check for reference attributes in capture base
-  // Handle different OCA package structures
-  const bundle = ocaPackage.bundle || ocaPackage.oca_bundle?.bundle || ocaPackage;
-  const attributes = bundle.capture_base?.attributes || {};
-
-  return Object.values(attributes).some(
-    (value) =>
-      typeof value === "string" &&
-      (value.startsWith("refs:") || value.startsWith("refn:"))
-  );
-};
-
-/**
  * Extract schema data directly from OCA package for visualization
  * @param {Object} ocaPackage - OCA package object
  * @param {string} language - Language code (optional)
@@ -150,85 +100,17 @@ export const extractSchemaDataFromPackage = (ocaPackage, language = "eng") => {
     return null;
   }
 
-  // Handle different OCA package structures
-  const bundle = ocaPackage.bundle || ocaPackage.oca_bundle?.bundle || ocaPackage;
-  if (!bundle) {
-    return null;
-  }
-
   // Extract labels from the bundle's overlays
   const labelOverlay =
-    bundle.overlays?.label?.find((l) => l.language === language) ||
-    bundle.overlays?.label?.[0] ||
+    ocaPackage.bundle.overlays?.label?.find((l) => l.language === language) ||
+    ocaPackage.bundle.overlays?.label?.[0] ||
     {};
   const labels = labelOverlay.attribute_labels || {};
 
   return {
-    OCAPackage: ocaPackage,
-    bundle,
     dependencies: ocaPackage.dependencies || [],
-    primaryLanguage: language,
-    attributes: bundle.capture_base?.attributes || {},
-    overlays: bundle.overlays || {},
-    labels,
-    labelOverlay
-  };
-};
-
-/**
- * Extract schema data from context for visualization
- * @param {Object} context - React context containing schema data
- * @returns {Object} Processed schema data for visualization
- */
-export const extractSchemaDataFromContext = (context) => {
-  const {
-    OCAPackage,
-    attributeRowData = [],
-    attributesList = [],
-    lanAttributeRowData = {},
-    languages = ["English"]
-  } = context;
-
-  if (!OCAPackage) {
-    return null;
-  }
-
-  const bundle = OCAPackage.oca_bundle?.bundle;
-  if (!bundle) {
-    return null;
-  }
-
-  // Get the primary language (usually English)
-  const primaryLanguage = languages[0] || "English";
-
-  // Build attributes object from context data
-  const attributes = {};
-  attributesList.forEach((attrName, index) => {
-    const attrData = attributeRowData[index];
-    if (attrData) {
-      attributes[attrName] = attrData.Type || "Text";
-    }
-  });
-
-  // Get labels from context
-  const labels = {};
-  if (lanAttributeRowData[primaryLanguage]) {
-    lanAttributeRowData[primaryLanguage].forEach((item, index) => {
-      const attrName = attributesList[index];
-      if (attrName && item.Label) {
-        labels[attrName] = item.Label;
-      }
-    });
-  }
-
-  return {
-    attributes,
-    dependencies: OCAPackage.dependencies || [],
-    labelOverlay: {
-      attribute_labels: labels
-    },
-    labels,
-    bundle,
-    ocaPackage: OCAPackage
+    attributes: ocaPackage.bundle.capture_base?.attributes || {},
+    overlays: ocaPackage.bundle.overlays || {},
+    labels
   };
 };
