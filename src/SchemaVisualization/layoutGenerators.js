@@ -2,7 +2,12 @@
  * Layout generators for different visualization modes
  */
 import dagre from "dagre";
-import { createDependencyMap, getDependencyInfo, processAttributes } from "./dataUtils";
+import {
+  createDependencyMap,
+  processAttributes,
+  getDependencyInfo,
+  truncateText
+} from "./dataUtils";
 
 /**
  * DATA STRUCTURE DOCUMENTATION
@@ -26,9 +31,8 @@ import { createDependencyMap, getDependencyInfo, processAttributes } from "./dat
  *   - Values: "root", "reference", "placeholder"
  *
  * Layout Modes:
- * - Tree Layout: Hierarchical parent-child structure, minimal node info, nested relationships
- * - Detailed Layout: Flat network of detailed nodes, reference fields visible and connected by edges,
- *   other fields visible on toggle
+ * - Tree Layout: Hierarchical parent-child structure, minimal node info (schema names only)
+ * - Detailed Layout: Flat network of detailed nodes, all field information visible, connected by edges
  */
 
 /**
@@ -241,7 +245,7 @@ export const generateTreeLayout = (
     if (!nodeData || processedIds.has(nodeData.id)) return;
     processedIds.add(nodeData.id);
 
-    const nodeLabel = nodeData.name;
+    const nodeLabel = truncateText(nodeData.name, 20);
 
     // Add node to nodes array
     nodes.push({
@@ -329,7 +333,7 @@ export const generateDetailedLayout = (
       id: nodeId,
       type: "detailedLR",
       data: {
-        title,
+        title: truncateText(title, 20),
         fields, // Raw fields - truncation handled in UI
         nodeType
       },

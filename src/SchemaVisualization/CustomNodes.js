@@ -6,6 +6,7 @@ import { Handle, Position, NodeToolbar } from "@xyflow/react";
 import "./SchemaVisualization.css";
 
 // Constants
+// Constants
 const FIELD_NAME_MAX_LENGTH = 35;
 
 // Helper function to get display type for fields

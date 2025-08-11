@@ -1,13 +1,13 @@
 /**
  * Main Schema Visualization Component
- * Displays hierarchical OCA schemas using React Flow
+ * Displays hierarchical OCA schemas us    // Create a mock context object with the schema data
+    const languageCode = toThreeLetterCode(i18n.language.split("-")[0]) || "eng";
+    const mockContext = extractSchemaDataFromPackage(currentSchema, languageCode);React Flow
  */
 import React, { useState, useCallback, useContext, useEffect, useRef } from "react";
 import {
   ReactFlow,
   applyNodeChanges,
-  applyEdgeChanges,
-  addEdge,
   Controls,
   MiniMap,
   Background
@@ -16,7 +16,6 @@ import "@xyflow/react/dist/style.css";
 import { Box, Button, Typography } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import i18next from "i18next";
 
 import { Context } from "../App";
 import Header from "../Header/Header";
@@ -25,6 +24,7 @@ import { CustomPalette } from "../constants/customPalette";
 import { PlaceholderNode, DetailedNode } from "./CustomNodes";
 import { generateTreeLayout, generateDetailedLayout } from "./layoutGenerators";
 import { extractSchemaDataFromPackage } from "./dataUtils";
+import { toThreeLetterCode } from "../constants/isoCodes";
 import "./SchemaVisualization.css";
 
 // Custom node types for React Flow
@@ -33,30 +33,11 @@ const nodeTypes = {
   detailedLR: DetailedNode
 };
 
-// Update the language mapping to work with i18next language codes
-const i18nextToOCALanguageMap = {
-  en: "eng",
-  fr: "fra",
-  es: "spa",
-  de: "deu",
-  it: "ita"
-};
-
-/**
- * Get OCA language code from i18next language code
- * @param {string} i18nextLang - i18next language code (e.g., "en", "fr")
- * @returns {string} OCA language code (e.g., "eng", "fra")
- */
-const getOCALanguageCode = (i18nextLang) => {
-  const baseCode = i18nextLang.split("-")[0]; // Handle "en-US" -> "en"
-  return i18nextToOCALanguageMap[baseCode] || "eng";
-};
-
 /**
  * Schema Visualization Component
  */
 const SchemaVisualization = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const context = useContext(Context);
@@ -70,7 +51,6 @@ const SchemaVisualization = () => {
   const [viewSwitchLoading, setViewSwitchLoading] = useState(false);
   const [hasHierarchy, setHasHierarchy] = useState(false);
   const [loadedSchema, setLoadedSchema] = useState(null);
-  const [layoutTrigger, setLayoutTrigger] = useState(0); // Trigger for layout regeneration
 
   // ReactFlow instance ref
   const reactFlowInstanceRef = useRef(null);
@@ -78,16 +58,6 @@ const SchemaVisualization = () => {
   // React Flow event handlers
   const onNodesChange = useCallback(
     (changes) => setNodes((nodesSnapshot) => applyNodeChanges(changes, nodesSnapshot)),
-    []
-  );
-
-  const onEdgesChange = useCallback(
-    (changes) => setEdges((edgesSnapshot) => applyEdgeChanges(changes, edgesSnapshot)),
-    []
-  );
-
-  const onConnect = useCallback(
-    (params) => setEdges((edgesSnapshot) => addEdge(params, edgesSnapshot)),
     []
   );
 
@@ -100,27 +70,40 @@ const SchemaVisualization = () => {
       return;
     }
 
-    // Create a mock context object with the schema data
-    const languageCode = getOCALanguageCode(i18next.language);
-    const mockContext = extractSchemaDataFromPackage(currentSchema, languageCode);
+    // Create a processed schema data object for visualization
+    const languageCode = toThreeLetterCode(i18n.language.split("-")[0]) || "eng";
+    const processedSchemaData = extractSchemaDataFromPackage(currentSchema, languageCode);
 
-    if (!mockContext) {
-      // Failed to create mock context
+    if (!processedSchemaData) {
+      // Failed to extract schema data
       return;
     }
 
     let result;
 
     try {
-      if (viewMode === "tree") {
-        // Generating tree layout
-        result = generateTreeLayout(mockContext, languageCode, t("Parent Schema"));
-      } else {
-        // Generating detailed layout
-        result = generateDetailedLayout(mockContext, languageCode, t("Parent Schema"));
+      // Get schema name from metadata for the current language or use default
+      let schemaName = t("Parent Schema");
+
+      if (
+        processedSchemaData.overlays?.meta &&
+        Array.isArray(processedSchemaData.overlays.meta)
+      ) {
+        const metaOverlay = processedSchemaData.overlays.meta.find(
+          (overlay) => overlay.language === languageCode
+        );
+        if (metaOverlay?.name) {
+          schemaName = metaOverlay.name;
+        }
       }
 
-      if (result && result.nodes && result.edges) {
+      if (viewMode === "tree") {
+        result = generateTreeLayout(processedSchemaData, languageCode, schemaName);
+      } else {
+        result = generateDetailedLayout(processedSchemaData, languageCode, schemaName);
+      }
+
+      if (result?.nodes && result?.edges) {
         setNodes(result.nodes);
         setEdges(result.edges);
 
@@ -132,24 +115,13 @@ const SchemaVisualization = () => {
             }
           }, 150);
         }
-      } else {
-        // Invalid layout result
       }
     } catch (error) {
-      // Error generating layout
+      // Handle layout generation errors by setting empty state
+      setNodes([]);
+      setEdges([]);
     }
-  }, [loadedSchema, OCAPackage, viewMode, viewSwitchLoading, layoutTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Listen for i18next language changes and regenerate layout
-  useEffect(() => {
-    const handleLanguageChange = () => {
-      // Trigger layout regeneration by updating layoutTrigger
-      setLayoutTrigger((prev) => prev + 1);
-    };
-
-    i18next.on("languageChanged", handleLanguageChange);
-    return () => i18next.off("languageChanged", handleLanguageChange);
-  }, []); // Empty dependency array - no circular dependencies
+  }, [loadedSchema, OCAPackage, viewMode, viewSwitchLoading, i18n.language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Effect to handle file reading from navigation state
   useEffect(() => {
@@ -399,11 +371,10 @@ const SchemaVisualization = () => {
               nodes={nodes}
               edges={edges}
               onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
               onInit={(instance) => {
                 reactFlowInstanceRef.current = instance;
               }}
+              edgesFocusable={false}
               nodeTypes={nodeTypes}
               nodesConnectable={false}
               fitView

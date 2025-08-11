@@ -3,6 +3,20 @@
  */
 
 /**
+ * Universal truncation function for all text in the application
+ * @param {string} text - Text to truncate
+ * @param {number} maxLength - Maximum length before truncation
+ * @returns {string} Truncated text with "..." if needed
+ */
+export const truncateText = (text, maxLength) => {
+  if (!text || text.length <= maxLength) {
+    return text;
+  }
+  const truncateAt = maxLength - 3; // Reserve 3 chars for "..."
+  return `${text.substring(0, truncateAt)}...`;
+};
+
+/**
  * Create a dependency map from OCA package dependencies
  * @param {Array} dependencies - Array of dependency objects
  * @returns {Object} Map of dependency IDs to dependency objects
@@ -37,10 +51,7 @@ export const processAttributes = (attributes, labels = {}) => {
     const isPlaceholder = typeof value === "string" && value.startsWith("refn:");
 
     // Truncate field name if it's too long
-    const truncatedName =
-      fieldName.length > FIELD_NAME_MAX_LENGTH
-        ? `${fieldName.substring(0, FIELD_NAME_MAX_LENGTH)}...`
-        : fieldName;
+    const truncatedName = truncateText(fieldName, FIELD_NAME_MAX_LENGTH);
 
     return {
       name: truncatedName,
