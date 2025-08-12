@@ -53,14 +53,13 @@
   --boolean-bg: #fce4ec;
   --boolean-border: #e91e63;
   
-  /* UI component colors - warmer and more inviting */
+  /* UI component colors */
   --header-bg: #ffffff;
   --border-color: #cbd5e1;
   --default-field-bg: #ffffff;
   --default-field-border: #cbd5e1;
   
-  /* Text colors - better contrast */
-  --field-type-color: #475569;
+  /* Text colors */
   --header-text-color: #1e293b;
   
   /* Background colors */
@@ -70,16 +69,9 @@
   --border-radius-sm: 3px;
   --border-radius-md: 4px;
   
-  /* Font size tokens - improved for readability */
+  /* Font size tokens */
   --font-size-xs: 12px;
   --font-size-sm: 14px;
-  
-  /* Control panel tokens */
-  --control-panel-bg: white;
-  --control-panel-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  --button-bg: #f0f0f0;
-  --button-border: #ccc;
-  --text-muted: #666;
 }
 
 .detailed-node {
@@ -235,122 +227,11 @@
   margin-left: 4px;
 }
 
-/* View control panel styles */
-.view-control-panel {
-  background: var(--control-panel-bg);
-  padding: 10px;
-  border-radius: var(--border-radius-md);
-  box-shadow: var(--control-panel-shadow);
-}
-
-.view-mode-label {
-  font-size: var(--font-size-xs);
-  margin-bottom: 5px;
-  color: var(--text-muted);
-}
-
-.view-toggle-button {
-  padding: 8px 16px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--button-border);
-  background: var(--button-bg);
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-}
-
 /* Enhanced Schema Visualization Container */
 .schema-visualization-container {
   width: 100vw;
   height: 100vh;
   position: relative;
-}
-
-/* Enhanced control panel styling */
-.view-control-panel {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 1000;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(10px);
-  padding: 16px;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  min-width: 220px;
-}
-
-.view-mode-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: #333;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-
-.language-control-panel {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 1000;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(10px);
-  padding: 16px;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  min-width: 180px;
-}
-
-.language-control-panel .MuiTypography-caption {
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  color: #333 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-  margin-bottom: 4px !important;
-}
-
-.language-control-panel .MuiButton-root {
-  background: #4caf50 !important;
-  color: white !important;
-  border: none !important;
-  padding: 10px 16px !important;
-  border-radius: 6px !important;
-  cursor: pointer !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
-  transition: all 0.3s ease !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3) !important;
-  line-height: 1.2 !important;
-  white-space: nowrap !important;
-  min-height: 40px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-.language-control-panel .MuiButton-root:hover {
-  background: #388e3c !important;
-  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4) !important;
-  transform: translateY(-1px) !important;
-}
-
-.language-control-panel .MuiButton-root:disabled {
-  background: #ccc !important;
-  color: #666 !important;
-  cursor: not-allowed !important;
-  box-shadow: none !important;
-  transform: none !important;
 }
 
 /* React Flow edge styling */
@@ -425,13 +306,13 @@
 
 /* Disable cursor changes for handles and edges since we don't allow connections */
 .react-flow__handle {
-  cursor: default !important;
+  cursor: default;
 }
 
 .react-flow__edge {
-  cursor: default !important;
+  cursor: default;
 }
 
 .react-flow__edge-path {
-  cursor: default !important;
+  cursor: default;
 }

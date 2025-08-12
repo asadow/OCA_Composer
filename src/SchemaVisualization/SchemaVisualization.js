@@ -20,11 +20,11 @@ import { useTranslation } from "react-i18next";
 import { Context } from "../App";
 import Header from "../Header/Header";
 import Footer from "../Footer/Footer";
-import { CustomPalette } from "../constants/customPalette";
 import { PlaceholderNode, DetailedNode } from "./CustomNodes";
 import { generateTreeLayout, generateDetailedLayout } from "./layoutGenerators";
 import { extractSchemaDataFromPackage } from "./dataUtils";
 import { toThreeLetterCode } from "../constants/isoCodes";
+import { CustomPalette } from "../constants/customPalette";
 import "./SchemaVisualization.css";
 
 // Custom node types for React Flow
@@ -41,7 +41,7 @@ const SchemaVisualization = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const context = useContext(Context);
-  const { OCAPackage, setCurrentPage } = context;
+  const { OCAPackage, setCurrentPage, setOCAPackage } = context;
 
   // State for visualization
   const [viewMode, setViewMode] = useState("tree");
@@ -49,7 +49,6 @@ const SchemaVisualization = () => {
   const [edges, setEdges] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewSwitchLoading, setViewSwitchLoading] = useState(false);
-  const [hasHierarchy, setHasHierarchy] = useState(false);
   const [loadedSchema, setLoadedSchema] = useState(null);
 
   // ReactFlow instance ref
@@ -175,11 +174,17 @@ const SchemaVisualization = () => {
     if (currentSchema) {
       const hasHierarchy =
         currentSchema.dependencies && currentSchema.dependencies.length > 0;
-      setHasHierarchy(hasHierarchy);
 
       if (!hasHierarchy) {
-        // No hierarchical structure, could redirect to regular view
-        // For now, we'll still show the schema but with a message
+        // No hierarchical structure, redirect to regular View Schema page (step 6)
+        // Ensure the OCA package is set in context if we loaded from navigation state
+        if (loadedSchema && !OCAPackage) {
+          setOCAPackage(loadedSchema);
+        }
+        // Set the page to "View" to go directly to step 6
+        setCurrentPage("View");
+        navigate("/start");
+        return;
       }
 
       // Generate initial layout
@@ -191,6 +196,7 @@ const SchemaVisualization = () => {
     loadedSchema,
     navigate,
     setCurrentPage,
+    setOCAPackage,
     generateLayout,
     location.state
   ]);
@@ -225,9 +231,13 @@ const SchemaVisualization = () => {
   };
 
   const handleBackToEditor = () => {
+    // Set the page to "View" to go directly to step 6
+    setCurrentPage("View");
     navigate("/start");
   };
 
+  // Not seeing this as loading is fast
+  // Keeping for now in case of large schemas and longer loads
   if (isLoading) {
     return (
       <Box
@@ -273,9 +283,7 @@ const SchemaVisualization = () => {
               {t("Schema Visualization")}
             </Typography>
             <Typography variant="body2">
-              {hasHierarchy
-                ? t("Hierarchical structure detected")
-                : t("Single-level schema")}
+              {t("Hierarchical structure detected")}
             </Typography>
           </Box>
 
@@ -287,8 +295,9 @@ const SchemaVisualization = () => {
               sx={{
                 color: "white",
                 borderColor: "white",
+                transition: "all 0.2s ease",
                 "&:hover": {
-                  backgroundColor: "rgba(255,255,255,0.1)",
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
                   borderColor: "white"
                 }
               }}
@@ -302,8 +311,9 @@ const SchemaVisualization = () => {
               sx={{
                 color: "white",
                 borderColor: "white",
+                transition: "all 0.2s ease",
                 "&:hover": {
-                  backgroundColor: "rgba(255,255,255,0.1)",
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
                   borderColor: "white"
                 }
               }}
@@ -316,35 +326,61 @@ const SchemaVisualization = () => {
         {/* Visualization Container */}
         <Box sx={{ flex: 1, position: "relative" }}>
           {/* Controls */}
-          <Box className="view-control-panel">
-            <Typography className="view-mode-label">
+          <Box
+            sx={{
+              position: "absolute",
+              top: 20,
+              right: 20,
+              zIndex: 1000,
+              background: "rgba(255, 255, 255, 0.98)",
+              backdropFilter: "blur(10px)",
+              padding: 2,
+              borderRadius: "0.5rem",
+              boxShadow: 20,
+              display: "flex",
+              flexDirection: "column",
+              gap: 1.5,
+              border: `1px solid ${CustomPalette.GREY_300}`,
+              minWidth: "220px"
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: "14px",
+                fontWeight: 700,
+                color: CustomPalette.GREY_800,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                marginBottom: 0.5
+              }}
+            >
               {t("Current")}: {viewMode === "tree" ? t("Tree") : t("Detailed")}
             </Typography>
             <Button
               onClick={handleViewModeChange}
-              className="view-toggle-button"
               size="small"
               sx={{
                 backgroundColor: CustomPalette.PRIMARY,
                 color: "white",
                 border: "none",
                 padding: "12px 20px",
-                borderRadius: "8px",
-                fontSize: "13px",
+                borderRadius: "0.5rem",
+                fontSize: "14px",
                 fontWeight: 600,
                 textTransform: "uppercase",
                 letterSpacing: "0.5px",
-                boxShadow: `0 2px 8px ${CustomPalette.PRIMARY}40`,
+                boxShadow: 5,
                 minHeight: "44px",
                 whiteSpace: "nowrap",
+                transition: "all 0.2s ease",
                 "&:hover": {
                   backgroundColor: CustomPalette.SECONDARY,
-                  boxShadow: `0 4px 12px ${CustomPalette.SECONDARY}66`,
+                  boxShadow: 10,
                   transform: "translateY(-1px)"
                 },
                 "&:active": {
                   transform: "translateY(0)",
-                  boxShadow: `0 2px 6px ${CustomPalette.SECONDARY}4D`
+                  boxShadow: 2
                 }
               }}
             >
@@ -363,7 +399,7 @@ const SchemaVisualization = () => {
                 justifyContent: "center",
                 alignItems: "center",
                 height: "100%",
-                backgroundColor: "#f5f5f5"
+                backgroundColor: CustomPalette.GREY_200
               }}
             />
           ) : (
