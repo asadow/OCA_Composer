@@ -556,7 +556,14 @@ const useHandleAllDrop = (pageForward) => {
           handleBundleJSONDrop(modifiedBundle, jsonFile);
         } else if (jsonFile?.bundle) {
           const modifiedJsonFile = replaceAttributeCharsInParsedJson(jsonFile.bundle);
-          handleBundleJSONDrop(modifiedJsonFile);
+          // If dependencies exist, keep the full OCA package in context for visualization
+          if (jsonFile?.dependencies && Array.isArray(jsonFile.dependencies)) {
+            const sanitizedOcaPackage = { ...jsonFile, bundle: modifiedJsonFile };
+            setOCAPackage(sanitizedOcaPackage);
+            handleBundleJSONDrop(modifiedJsonFile, sanitizedOcaPackage);
+          } else {
+            handleBundleJSONDrop(modifiedJsonFile);
+          }
         } else if (jsonFile?.schema?.[0]) {
           handleBundleJSONDrop(jsonFile?.schema?.[0]);
         } else {

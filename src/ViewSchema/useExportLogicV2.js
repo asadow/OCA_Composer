@@ -47,7 +47,8 @@ const useExportLogicV2 = () => {
     overlay,
     cardinalityData,
     rangeRowData,
-    attributeFramingRowData
+    attributeFramingRowData,
+    OCAPackage
   } = useContext(Context);
 
   const { jsonToTextFile } = useGenerateReadMeV2();
@@ -431,6 +432,17 @@ const useExportLogicV2 = () => {
 
     try {
       setError("");
+
+      // Check if we're working with a pre-existing OCA package from upload
+      // Note: Even for existing packages, we regenerate on export to ensure consistency
+      // and avoid digest verification issues with the oca_package library
+      const hasExistingOCAPackage =
+        OCAPackage && OCAPackage.bundle && OCAPackage.bundle.d;
+
+      if (hasExistingOCAPackage) {
+        console.log("Regenerating OCA package for export to ensure consistency");
+      }
+
       // const rangeOverlayInput = getRangeOverlayInput(rangeRowData, formatRuleRowData);
       // console.log("rangeOverlayInput", rangeOverlayInput);
       // return;
@@ -509,7 +521,7 @@ const useExportLogicV2 = () => {
       const extension = {
         extensions: {
           [ADC]: {
-            [bundle.bundle.d]: extension_overlays
+            [bundle?.bundle?.d || "bundle_id"]: extension_overlays
           }
         }
       };

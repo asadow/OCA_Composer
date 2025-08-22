@@ -357,7 +357,7 @@ export const generateDetailedLayout = (
         allEdges.push({
           id: `${nodeId}-${referencedId}`,
           source: nodeId,
-          sourceHandle: field.name,
+          sourceHandle: field.originalName || field.name,
           target: referencedId
         });
       } else if (field.isPlaceholder) {
@@ -368,7 +368,7 @@ export const generateDetailedLayout = (
         allEdges.push({
           id: `${nodeId}-${placeholderId}`,
           source: nodeId,
-          sourceHandle: field.name,
+          sourceHandle: field.originalName || field.name,
           target: placeholderId
         });
       }

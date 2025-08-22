@@ -25,6 +25,7 @@ import {
 } from "../constants/utils";
 import ErrorPopup from "./ErrorPopup";
 import CustomRouterLink from "../components/CustomRouterLink";
+import SchemaVisualizationEmbed from "../SchemaVisualization/SchemaVisualizationEmbed";
 
 // const currentEnv = process.env.REACT_APP_ENV;
 
@@ -42,6 +43,7 @@ export default function ViewSchema({
     languages,
     attributeRowData,
     lanAttributeRowData,
+    schemaDescription,
     isZip,
     isZipEdited,
     setIsZipEdited,
@@ -72,8 +74,14 @@ export default function ViewSchema({
   const { resetToDefaults, exportDisabled } = useExportLogic();
   const { exportData, error: exportError, clearError } = useExportLogicV2();
   const [loading, setLoading] = useState(true);
+  const [visualizationMode, setVisualizationMode] = useState("tree");
   const { toTextFile } = useGenerateReadMe();
   const { jsonToTextFile } = useGenerateReadMeV2();
+  const hasHierarchy = !!(
+    OCAPackage &&
+    OCAPackage.dependencies &&
+    OCAPackage.dependencies.length > 0
+  );
 
   // Formats language buttons in a way that can handle many languages cleanly
   // Minimizes language for cases where it's too long to fit in button size
@@ -594,11 +602,88 @@ export default function ViewSchema({
         </Box>
         <SchemaDescription currentLanguage={currentLanguage} />
 
+        {/* Schema Visualization header */}
+        {hasHierarchy && (
+          <>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                marginTop: 2,
+                marginBottom: 1
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 22,
+                  fontWeight: "bold",
+                  color: CustomPalette.PRIMARY
+                }}
+              >
+                {t("Schema Visualization")}
+              </Typography>
+              <Box sx={{ marginLeft: "1rem", color: CustomPalette.GREY_600 }}>
+                <Tooltip
+                  title={t("Visual representation of references between schemas")}
+                  placement="right"
+                  arrow
+                >
+                  <HelpOutlineIcon sx={{ fontSize: 15 }} />
+                </Tooltip>
+              </Box>
+            </Box>
+
+            {/* Mode toggle buttons matching Schema Language style */}
+            <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+              <Button
+                color="button"
+                variant="contained"
+                onClick={() => setVisualizationMode("tree")}
+                sx={{
+                  backgroundColor:
+                    visualizationMode === "tree"
+                      ? CustomPalette.PRIMARY
+                      : CustomPalette.SECONDARY,
+                  boxShadow: "none"
+                }}
+              >
+                {t("Tree View")}
+              </Button>
+              <Button
+                color="button"
+                variant="contained"
+                onClick={() => setVisualizationMode("detailed")}
+                sx={{
+                  backgroundColor:
+                    visualizationMode === "detailed"
+                      ? CustomPalette.PRIMARY
+                      : CustomPalette.SECONDARY,
+                  boxShadow: "none"
+                }}
+              >
+                {t("Detailed View")}
+              </Button>
+            </Box>
+
+            <Box sx={{ mb: 4, width: "100%" }}>
+              <SchemaVisualizationEmbed
+                attributeRowData={attributeRowData}
+                schemaDescription={schemaDescription}
+                languages={filteredLanguages}
+                OCAPackage={OCAPackage}
+                viewMode={visualizationMode}
+                height="70vh"
+              />
+            </Box>
+          </>
+        )}
+
+        {/* Schema Details header */}
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
-            marginTop: 4,
+            marginTop: 2,
             marginBottom: 2
           }}
         >
