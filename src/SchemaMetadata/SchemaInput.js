@@ -8,6 +8,7 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { languageCodesObject } from "../constants/isoCodes";
 import Classification from "./Classification";
 import { useTranslation } from "react-i18next";
+import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 
 export default function SchemaInput({
   language,
@@ -22,10 +23,25 @@ export default function SchemaInput({
     languages,
     setLanguages,
     customIsos,
+    OCAPackage,
+    editingSchemaId
   } = useContext(Context);
   const [deleteHover, setDeleteHover] = useState(false);
   const nameFieldId = `schema-name${language}`;
   const descriptionFieldId = `schema-description${language}`;
+
+  // Get the schema data for the currently editing schema
+  const currentSchemaData = editingSchemaId ? getSchemaDataById(OCAPackage, editingSchemaId) : null;
+  
+  // If we're editing a specific schema, use the schema name and description from the data
+  const schemaName = currentSchemaData?.schemaName || currentSchemaData?.fieldName || editingSchemaId;
+  const currentSchemaDescription = currentSchemaData?.schemaDescription || "";
+  
+  console.log("SchemaInput - editingSchemaId:", editingSchemaId);
+  console.log("SchemaInput - currentSchemaData:", currentSchemaData);
+  console.log("SchemaInput - schemaName:", schemaName);
+  console.log("SchemaInput - language:", language);
+  console.log("SchemaInput - currentSchemaDescription:", currentSchemaDescription);
 
   const handleNameField = (e) => {
     e.preventDefault();
@@ -37,6 +53,12 @@ export default function SchemaInput({
       [language]: { ...newSchema[language], name: newText },
     };
     setSchemaDescription(newSchema);
+    
+    // If we're editing a specific schema, update the schema name in the OCA package
+    if (editingSchemaId && currentSchemaData) {
+      // This will be handled by the export logic when the user saves
+      // For now, we just update the schema description
+    }
   };
 
   const handleDescriptionField = (e) => {
@@ -191,7 +213,9 @@ export default function SchemaInput({
             },
           }}
           value={
-            schemaDescription[language] && schemaDescription[language].name
+            editingSchemaId
+              ? schemaName || ""
+              : schemaDescription[language] && schemaDescription[language].name
           }
         />
         <Box
@@ -223,17 +247,19 @@ export default function SchemaInput({
             </Tooltip>
           )}
         </Box>
-        <TextField
-          multiline={true}
-          rows="5"
-          id={descriptionFieldId}
-          type="text"
-          onChange={handleDescriptionField}
-          value={
-            schemaDescription[language] &&
-            schemaDescription[language].description
-          }
-        />
+                 <TextField
+           multiline={true}
+           rows="5"
+           id={descriptionFieldId}
+           type="text"
+           onChange={handleDescriptionField}
+           value={
+             editingSchemaId
+               ? currentSchemaDescription
+               : schemaDescription[language] &&
+                 schemaDescription[language].description
+           }
+         />
       </Box>
     </Box>
   );

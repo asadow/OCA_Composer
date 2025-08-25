@@ -16,6 +16,7 @@ import IsoCard from "./IsoCard";
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 
 export default function SchemaMetadata({
   pageBack,
@@ -30,8 +31,22 @@ export default function SchemaMetadata({
   const [fieldArray, setFieldArray] = useState([]);
   const [showIsoInput, setShowIsoInput] = useState(false);
   const [editingLanguage, setEditingLanguage] = useState("");
-  const { schemaDescription, setSchemaDescription, languages, history, setHistory, setCurrentPage } =
-    useContext(Context);
+  const { 
+    schemaDescription, 
+    setSchemaDescription, 
+    languages, 
+    history, 
+    setHistory, 
+    setCurrentPage,
+    OCAPackage,
+    editingSchemaId
+  } = useContext(Context);
+
+  // Get the schema data for the currently editing schema
+  const currentSchemaData = editingSchemaId ? getSchemaDataById(OCAPackage, editingSchemaId) : null;
+  
+  // If we're editing a specific schema, set the schema name to the schema ID or field name
+  const schemaName = currentSchemaData?.isPlaceholder ? currentSchemaData.fieldName : editingSchemaId;
 
   const toTitleCase = (str) => {
     return str.toLowerCase().replace(/^(.)|\s(.)/g, function(match) {

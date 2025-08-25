@@ -14,7 +14,7 @@ import "@xyflow/react/dist/style.css";
 import { Box, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 
-import { PlaceholderNode, DetailedNode } from "./CustomNodes";
+import { PlaceholderNode, DetailedNode, TreeNode } from "./CustomNodes";
 import { generateTreeLayout, generateDetailedLayout } from "./layoutGenerators";
 import { extractSchemaDataFromPackage } from "./dataUtils";
 import { toThreeLetterCode } from "../constants/isoCodes";
@@ -23,7 +23,8 @@ import Spinner from "../components/Spinner";
 
 const nodeTypes = {
   placeholderNode: PlaceholderNode,
-  detailedLR: DetailedNode
+  detailedLR: DetailedNode,
+  treeNode: TreeNode
 };
 
 const SchemaVisualizationEmbed = ({
@@ -33,7 +34,9 @@ const SchemaVisualizationEmbed = ({
   OCAPackage,
   viewMode = "tree",
   height = "500px",
-  showDebug = false
+  showDebug = false,
+  currentSchemaId,
+  setCurrentSchemaId
 }) => {
   const { t, i18n } = useTranslation();
   const [nodes, setNodes] = useState([]);
@@ -42,6 +45,13 @@ const SchemaVisualizationEmbed = ({
   const [viewSwitchLoading, setViewSwitchLoading] = useState(false);
   const [hasData, setHasData] = useState(false);
   const reactFlowInstanceRef = useRef(null);
+
+  // Handle node clicks for schema navigation
+  const handleNodeClick = useCallback((nodeId) => {
+    if (setCurrentSchemaId) {
+      setCurrentSchemaId(nodeId);
+    }
+  }, [setCurrentSchemaId]);
 
   // React Flow event handlers
   const onNodesChange = (changes) =>
@@ -155,11 +165,22 @@ const SchemaVisualizationEmbed = ({
           schemaName = metaOverlay.name;
         }
       }
-      if (internalViewMode === "tree") {
-        result = generateTreeLayout(processedSchemaData, languageCode, schemaName);
-      } else {
-        result = generateDetailedLayout(processedSchemaData, languageCode, schemaName);
-      }
+             if (internalViewMode === "tree") {
+         result = generateTreeLayout(processedSchemaData, languageCode, schemaName, currentSchemaId);
+       } else {
+         result = generateDetailedLayout(processedSchemaData, languageCode, schemaName, currentSchemaId);
+       }
+       
+       // Add click handlers to nodes
+       if (result?.nodes) {
+         result.nodes = result.nodes.map((node) => ({
+           ...node,
+           data: {
+             ...node.data,
+             onNodeClick: handleNodeClick
+           }
+         }));
+       }
       if (result?.nodes && result?.edges) {
         setNodes(result.nodes);
         setEdges(result.edges);
@@ -184,6 +205,13 @@ const SchemaVisualizationEmbed = ({
     const ocaPackage = getOCAPackage();
     if (ocaPackage && ocaPackage.dependencies && ocaPackage.dependencies.length > 0) {
       generateLayout();
+      
+      // Set initial currentSchemaId to the root schema if not already set
+      // Only set if we're not already on a specific schema
+      if (!currentSchemaId && setCurrentSchemaId && ocaPackage.bundle?.d) {
+        // Don't automatically set currentSchemaId as it might cause unwanted navigation
+        // setCurrentSchemaId(ocaPackage.bundle.d);
+      }
     } else {
       // Fallback test nodes if no multilevel schema data
       const testNodes = [

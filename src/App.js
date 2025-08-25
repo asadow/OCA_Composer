@@ -14,6 +14,7 @@ import LearnAboutSchemaRule from "./OCADataValidator/LearnAboutSchemaRule";
 import LearnAboutDataVerification from "./OCADataValidator/LearnAboutDataVerification";
 import OCAMerge from "./OCAMerge/OCAMerge";
 import SchemaVisualization from "./SchemaVisualization/SchemaVisualization";
+import { getSchemaDataById } from "./SchemaVisualization/dataUtils";
 // import Tutorial from "./Tutorial/Tutorial";
 import useUnitFramingUpdater from "./hooks/useUnitFramingUpdater";
 import {
@@ -96,6 +97,8 @@ function App() {
   const [lanAttributeRowData, setLanAttributeRowData] = useState({});
   const [showIntroCard, setShowIntroCard] = useState(true);
   const [customIsos, setCustomIsos] = useState({});
+  const [currentSchemaId, setCurrentSchemaId] = useState(null);
+  const [editingSchemaId, setEditingSchemaId] = useState(null);
 
   // Use for Overlays
   const [characterEncodingRowData, setCharacterEncodingRowData] = useState([]);
@@ -162,6 +165,113 @@ function App() {
 
   // Ordering extension overlay for OCA package
   const [OCAPackage, setOCAPackage] = useState(null);
+
+  // New Multi-Schema State Structure
+  const [schemaStates, setSchemaStates] = useState({});
+  const [activeSchemaId, setActiveSchemaId] = useState(null);
+  const [schemaNavigationHistory, setSchemaNavigationHistory] = useState([]);
+
+  // Schema state management functions
+    const getSchemaState = (schemaId) => {
+    return schemaStates[schemaId] || {
+      // Schema metadata
+      metadata: {
+        name: "",
+        description: "",
+        languages: ["English"]
+      },
+      // Schema attributes
+      attributes: [],
+      attributesList: [],
+      // Schema overlays
+      overlays: {
+        label: {},
+        unit: {},
+        cardinality: {},
+        format: {},
+        character_encoding: {},
+        conformance: {},
+        entry: {}
+      },
+      // Entry codes
+      entryCodes: {},
+      attributesWithLists: [],
+      // Overlay-specific data
+      characterEncodingData: [],
+      formatRuleData: [],
+      cardinalityData: [],
+      dataStandardsData: [],
+      rangeData: [],
+      unitData: [],
+      unitFramedData: [],
+      attributeFramingData: [],
+      // Flags
+      frameAllUnits: false,
+      frameAllAttributes: false,
+      unframedUnitList: [],
+      unframedAttributeList: [],
+      unitFramedThatAlreadyExist: {}
+    };
+  };
+  };
+
+  const updateSchemaState = (schemaId, updates) => setSchemaStates(prev => ({
+    ...prev,
+    [schemaId]: {
+      ...getSchemaState(schemaId),
+      ...updates
+    }
+  }));
+
+  const initializeSchemaFromOCA = (schemaId, ocaPackage) => {
+    const schemaData = getSchemaDataById(ocaPackage, schemaId);
+    if (!schemaData) return;
+
+    const newState = {
+      metadata: {
+        name: schemaData.schemaName || schemaId,
+        description: schemaData.schemaDescription || "",
+        languages: ["English", "French"]
+      },
+      attributes: Object.entries(schemaData.attributes || {}).map(([key, value]) => ({
+        Attribute: key,
+        Type: Array.isArray(value) ? value[0] : value,
+        Description: "",
+        Required: false,
+        List: false,
+        Unit: ""
+      })),
+      attributesList: Object.keys(schemaData.attributes || {}),
+      overlays: schemaData.overlays || {},
+      entryCodes: {},
+      attributesWithLists: [],
+      characterEncodingData: [],
+      formatRuleData: [],
+      cardinalityData: [],
+      dataStandardsData: [],
+      rangeData: [],
+      unitData: [],
+      unitFramedData: [],
+      attributeFramingData: [],
+      frameAllUnits: false,
+      frameAllAttributes: false,
+      unframedUnitList: [],
+      unframedAttributeList: [],
+      unitFramedThatAlreadyExist: {}
+    };
+
+    updateSchemaState(schemaId, newState);
+  };
+
+  const switchToSchema = (schemaId) => {
+    setActiveSchemaId(schemaId);
+    setSchemaNavigationHistory((prev) => [...prev, schemaId]);
+    
+    // Initialize schema if it doesn't exist
+    if (!schemaStates[schemaId] && OCAPackage) {
+      initializeSchemaFromOCA(schemaId, OCAPackage);
+    }
+  };
 
   const pageForward = () => {
     let currentIndex = pagesArray.indexOf(currentPage);
@@ -603,6 +713,22 @@ function App() {
     setOCAPackage(null);
   }, [fileData, jsonRawFile]);
 
+  // Keep attributesList in sync with the schema currently being edited
+  useEffect(() => {
+    try {
+      if (!OCAPackage || !editingSchemaId) {
+        return;
+      }
+      const schemaData = getSchemaDataById(OCAPackage, editingSchemaId);
+      const attrs = schemaData?.attributes ? Object.keys(schemaData.attributes) : [];
+      if (JSON.stringify(attrs) !== JSON.stringify(attributesList)) {
+        setAttributesList(attrs);
+      }
+    } catch (e) {
+      // no-op: defensive guard
+    }
+  }, [OCAPackage, editingSchemaId]);
+
   return (
     <div className="App">
       <ThemeProvider theme={CustomTheme}>
@@ -744,7 +870,18 @@ function App() {
             unframedAttributeList,
             setUnframedAttributeList,
             attributeFramingRowData,
-            setAttributeFramingRowData
+            setAttributeFramingRowData,
+            currentSchemaId,
+            setCurrentSchemaId,
+            editingSchemaId,
+            setEditingSchemaId,
+            schemaStates,
+            setSchemaStates,
+            activeSchemaId,
+            setActiveSchemaId,
+            schemaNavigationHistory,
+            setSchemaNavigationHistory,
+            switchToSchema
           }}
         >
           <Box

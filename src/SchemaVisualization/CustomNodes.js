@@ -3,6 +3,7 @@
  */
 import React from "react";
 import { Handle, Position, NodeToolbar } from "@xyflow/react";
+import EditIcon from "@mui/icons-material/Edit";
 import "./SchemaVisualization.css";
 
 // Constants
@@ -36,15 +37,64 @@ const FieldHandle = ({ field }) => (
 /**
  * Placeholder Node Component - represents potential extension points
  */
-export const PlaceholderNode = ({ data }) => (
-  <div className="placeholder-node">
-    <Handle type="target" position={Position.Top} />
-    <div className="placeholder-node-content">
-      <div className="placeholder-icon">📝</div>
-      <div className="placeholder-label">{data.label || "Placeholder Child Schema"}</div>
+export const PlaceholderNode = ({ data }) => {
+  const isCurrentSchema = data.currentSchemaId === data.nodeId;
+  const isHighlighted = isCurrentSchema;
+  
+  return (
+    <div className={`placeholder-node ${isHighlighted ? "highlighted" : ""}`}>
+      <Handle type="target" position={Position.Top} />
+      <div className="placeholder-node-content">
+        <div className="placeholder-icon">📝</div>
+        <div className="placeholder-label">{data.label || "Placeholder Child Schema"}</div>
+        {data.onNodeClick && (
+          <button 
+            type="button"
+            className="edit-schema-button-icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              data.onNodeClick(data.nodeId);
+            }}
+            title="Edit this schema"
+          >
+            <EditIcon sx={{ fontSize: 16 }} />
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+/**
+ * Tree Node Component - represents schema entities in tree view
+ */
+export const TreeNode = ({ data }) => {
+  const isCurrentSchema = data.currentSchemaId === data.nodeId;
+  const isHighlighted = isCurrentSchema;
+  
+  return (
+    <div className={`tree-node ${isHighlighted ? "highlighted" : ""}`}>
+      <Handle type="target" position={Position.Top} />
+      <Handle type="source" position={Position.Bottom} />
+      <div className="tree-node-content">
+        <div className="tree-node-label">{data.label}</div>
+        {data.onNodeClick && (
+          <button 
+            type="button"
+            className="edit-schema-button-icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              data.onNodeClick(data.nodeId);
+            }}
+            title="Edit this schema"
+          >
+            <EditIcon sx={{ fontSize: 16 }} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 /**
  * Detailed Node Component - represents schema entities with fields in left-to-right layout
@@ -93,6 +143,9 @@ export const DetailedNode = ({ data }) => {
   // Only show toolbar if there's actually content to display
   const showToolbar = truncatedFields.length > 0 || hiddenFieldsCount > 0;
 
+  const isCurrentSchema = data.currentSchemaId === data.nodeId;
+  const isHighlighted = isCurrentSchema;
+
   return (
     <>
       {showToolbar && (
@@ -132,13 +185,30 @@ export const DetailedNode = ({ data }) => {
         </NodeToolbar>
       )}
 
-      <div className={`detailed-node ${nodeType}`}>
+      <div className={`detailed-node ${nodeType} ${isHighlighted ? "highlighted" : ""}`}>
         {/* Only show input handle for non-root nodes */}
         {nodeType !== "root" && (
           <Handle type="target" position={Position.Left} style={{ top: "20px" }} />
         )}
 
-        <div className="detailed-header">{title}</div>
+        <div className="detailed-header">
+          <span>{title}</span>
+          {data.onNodeClick && (
+            <button 
+              type="button"
+              className="edit-schema-button-header"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (data.onNodeClick) {
+                  data.onNodeClick(data.nodeId);
+                }
+              }}
+              title="Edit this schema"
+            >
+              Edit
+            </button>
+          )}
+        </div>
 
         <div className="detailed-fields">
           {visibleFields.map((field, index) => {

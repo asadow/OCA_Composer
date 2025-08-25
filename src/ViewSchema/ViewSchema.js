@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import i18next from "i18next";
@@ -58,7 +58,10 @@ export default function ViewSchema({
     jsonToReadme,
     OCAPackage,
     rangeRowData,
-    attributeFramingRowData
+    attributeFramingRowData,
+    currentSchemaId,
+    setCurrentSchemaId,
+    setEditingSchemaId
   } = useContext(Context);
   const languageIndex = languages.findIndex(
     (item) => codesToLanguages?.[i18next.language] === item
@@ -75,6 +78,18 @@ export default function ViewSchema({
   const { exportData, error: exportError, clearError } = useExportLogicV2();
   const [loading, setLoading] = useState(true);
   const [visualizationMode, setVisualizationMode] = useState("tree");
+
+          // Handle schema switching
+        const handleSchemaSwitch = useCallback((schemaId) => {
+          if (schemaId && schemaId !== currentSchemaId) {
+            setCurrentSchemaId(schemaId);
+            // Set the schema being edited
+            setEditingSchemaId(schemaId);
+            // Navigate to the editor step 1 (Metadata) to edit the selected schema
+            setCurrentPage("Metadata");
+            navigate("/start");
+          }
+        }, [currentSchemaId, setCurrentSchemaId, setEditingSchemaId, setCurrentPage, navigate]);
   const { toTextFile } = useGenerateReadMe();
   const { jsonToTextFile } = useGenerateReadMeV2();
   const hasHierarchy = !!(
@@ -673,6 +688,8 @@ export default function ViewSchema({
                 OCAPackage={OCAPackage}
                 viewMode={visualizationMode}
                 height="70vh"
+                currentSchemaId={currentSchemaId}
+                setCurrentSchemaId={handleSchemaSwitch}
               />
             </Box>
           </>

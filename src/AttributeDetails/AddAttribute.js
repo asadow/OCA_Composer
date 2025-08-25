@@ -22,7 +22,7 @@ export default function AddAttribute({
   typesObjectRef
 }) {
   const { t } = useTranslation();
-  const { setAttributesList, setAttributeRowData } = useContext(Context);
+  const { setAttributesList, setAttributeRowData, attributeRowData } = useContext(Context);
   const [newAttribute, setNewAttribute] = useState("");
 
   const handleLanguageField = (e) => {
@@ -32,7 +32,10 @@ export default function AddAttribute({
 
   const handleAddRow = () => {
     gridRef.current.api.stopEditing();
-    const newAttributeRowData = JSON.parse(JSON.stringify(gridRef.current.props.rowData));
+    
+    // Use context data instead of trying to get it from the grid
+    const currentRowData = attributeRowData || [];
+    const newAttributeRowData = JSON.parse(JSON.stringify(currentRowData));
 
     newAttributeRowData.forEach((item) => {
       item.Type = typesObjectRef.current[item.Attribute] || "";
@@ -42,7 +45,7 @@ export default function AddAttribute({
     // Errors stop user from proceeding if there are entries that will cause issues
 
     let blanks = false;
-    gridRef.current.props.rowData.forEach((row) => {
+    currentRowData.forEach((row) => {
       const attributeValue = removeSpacesFromString(row.Attribute);
       if (attributeValue) {
         newAttributesList.push(attributeValue);

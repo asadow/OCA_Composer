@@ -13,6 +13,7 @@ import Loading from "../components/Loading";
 import { hasDisallowedChars } from "../constants/utils";
 import { FIELD_RANGE_OVERLAY } from "../constants/constants";
 import ErrorPopup from "../ViewSchema/ErrorPopup";
+import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 
 export default function AttributeDetails({
   pageBack,
@@ -28,7 +29,12 @@ export default function AttributeDetails({
     setAttributesList,
     setAttributeRowData,
     overlay,
-    setOverlay
+    setOverlay,
+    OCAPackage,
+    editingSchemaId,
+    setLanAttributeRowData,
+    languages,
+    setSavedEntryCodes
   } = useContext(Context);
   const [errorMessage, setErrorMessage] = useState("");
   const [canDelete, setCanDelete] = useState(attributeRowData.length !== 1);
@@ -38,6 +44,9 @@ export default function AttributeDetails({
 
   const [loading, setLoading] = useState(true);
   const navigationSafe = useRef();
+
+  // Get the schema data for the currently editing schema
+  const currentSchemaData = editingSchemaId ? getSchemaDataById(OCAPackage, editingSchemaId) : null;
   const gridRef = useRef();
   const refContainer = useRef();
   const entryCodesRef = useRef();
@@ -53,6 +62,168 @@ export default function AttributeDetails({
     });
     typesObjectRef.current = newTypesObjetRef;
   }, [attributeRowData]);
+
+  // When editing a specific schema, update the attribute data to match that schema
+  useEffect(() => {
+    if (editingSchemaId && currentSchemaData) {
+      console.log("Editing schema:", editingSchemaId);
+      console.log("Current schema data:", currentSchemaData);
+      
+                    // Import overlays data (units, labels, etc.) from the schema
+       const schemaOverlays = currentSchemaData.overlays || {};
+       console.log("Schema overlays:", schemaOverlays);
+       
+       // Convert the schema attributes to the format expected by the editor
+       const schemaAttributes = currentSchemaData.attributes || {};
+       const newAttributeRowData = Object.entries(schemaAttributes).map(([key, value]) => {
+         // Check if this attribute has entry codes (is a list)
+         const hasEntryCodes = schemaOverlays.entry && 
+           schemaOverlays.entry.some((entryOverlay) => 
+             entryOverlay.attribute_entries && 
+             entryOverlay.attribute_entries[key]
+           );
+         
+         return {
+           Attribute: key,
+           Type: Array.isArray(value) ? value[0] : value,
+           Description: "",
+           Required: false,
+           EntryCodes: [],
+           List: hasEntryCodes // Set List to true if entry codes exist
+         };
+       });
+       
+       console.log("New attribute row data:", newAttributeRowData);
+       
+       // Only update if the data is different to avoid infinite loops
+       if (JSON.stringify(newAttributeRowData) !== JSON.stringify(attributeRowData)) {
+         setAttributeRowData(newAttributeRowData);
+         
+         // Also update the attributesList to show the correct attributes in Step 1
+         const newAttributesList = Object.keys(schemaAttributes);
+         setAttributesList(newAttributesList);
+       }
+      console.log("Schema overlays:", schemaOverlays);
+      
+      // Update the overlay context with the schema's overlay data
+      if (schemaOverlays) {
+        const newOverlay = { ...overlay };
+        
+        // Import label overlays (for Step 3 Language-dependent Attribute Details)
+        if (schemaOverlays.label && Array.isArray(schemaOverlays.label)) {
+          // Convert array of label overlays to the format expected by the editor
+          const labelOverlays = {};
+          schemaOverlays.label.forEach((labelOverlay) => {
+            const lang = labelOverlay.language;
+            if (lang) {
+              labelOverlays[lang] = labelOverlay.attribute_labels || {};
+            }
+          });
+          newOverlay.label = labelOverlays;
+        }
+        
+        // Import unit overlays (for Step 4 Unit Framing)
+        if (schemaOverlays.unit) {
+          newOverlay.unit = schemaOverlays.unit;
+        }
+        
+        // Import cardinality overlays (for Step 5 Cardinality)
+        if (schemaOverlays.cardinality) {
+          newOverlay.cardinality = schemaOverlays.cardinality;
+        }
+        
+        // Import format overlays (for Step 6 Format Rules)
+        if (schemaOverlays.format) {
+          newOverlay.format = schemaOverlays.format;
+        }
+        
+        // Import character encoding overlays
+        if (schemaOverlays.character_encoding) {
+          newOverlay.character_encoding = schemaOverlays.character_encoding;
+        }
+        
+        // Import conformance overlays
+        if (schemaOverlays.conformance) {
+          newOverlay.conformance = schemaOverlays.conformance;
+        }
+        
+        // Import entry overlays (for entry codes)
+        if (schemaOverlays.entry && Array.isArray(schemaOverlays.entry)) {
+          // Convert array of entry overlays to the format expected by the editor
+          const entryOverlays = {};
+          schemaOverlays.entry.forEach((entryOverlay) => {
+            const lang = entryOverlay.language;
+            if (lang) {
+              entryOverlays[lang] = entryOverlay.attribute_entries || {};
+            }
+          });
+          newOverlay.entry = entryOverlays;
+        }
+        
+        console.log("Updated overlay data:", newOverlay);
+        setOverlay(newOverlay);
+        
+        // Update language attribute row data with labels from the schema
+        if (schemaOverlays.label && Array.isArray(schemaOverlays.label)) {
+          const newLanAttributeRowData = {};
+          
+          languages.forEach((language) => {
+            const langCode = language === "English" ? "eng" : language === "French" ? "fra" : language.toLowerCase();
+            const labelOverlay = schemaOverlays.label.find((l) => l.language === langCode);
+            
+            if (labelOverlay && labelOverlay.attribute_labels) {
+              const languageData = [];
+              Object.entries(schemaAttributes).forEach(([key]) => {
+                languageData.push({
+                  Attribute: key,
+                  Label: labelOverlay.attribute_labels[key] || "",
+                  Description: "",
+                  List: "Not a List"
+                });
+              });
+              newLanAttributeRowData[language] = languageData;
+            }
+          });
+          
+                     if (Object.keys(newLanAttributeRowData).length > 0) {
+             console.log("Updated language attribute data:", newLanAttributeRowData);
+             setLanAttributeRowData(newLanAttributeRowData);
+           }
+         }
+         
+         // Import entry codes data
+         if (schemaOverlays.entry && Array.isArray(schemaOverlays.entry)) {
+           const newSavedEntryCodes = {};
+           
+           schemaOverlays.entry.forEach((entryOverlay) => {
+             const lang = entryOverlay.language;
+             const langCode = lang === "eng" ? "English" : lang === "fra" ? "French" : lang;
+             
+             Object.entries(entryOverlay.attribute_entries || {}).forEach(([attrName, entries]) => {
+               if (!newSavedEntryCodes[attrName]) {
+                 newSavedEntryCodes[attrName] = [];
+               }
+               
+               Object.entries(entries).forEach(([code, value]) => {
+                 // Find existing entry or create new one
+                 let existingEntry = newSavedEntryCodes[attrName].find((entry) => entry.Code === code);
+                 if (!existingEntry) {
+                   existingEntry = { Code: code };
+                   newSavedEntryCodes[attrName].push(existingEntry);
+                 }
+                 existingEntry[langCode] = value;
+               });
+             });
+           });
+           
+           if (Object.keys(newSavedEntryCodes).length > 0) {
+             console.log("Updated entry codes data:", newSavedEntryCodes);
+             setSavedEntryCodes(newSavedEntryCodes);
+           }
+         }
+       }
+     }
+   }, [editingSchemaId, currentSchemaData, setAttributeRowData, attributeRowData, overlay, setOverlay, setLanAttributeRowData, languages, setSavedEntryCodes]);
 
   // Stops grid editing when clicking outside grid
   useEffect(() => {

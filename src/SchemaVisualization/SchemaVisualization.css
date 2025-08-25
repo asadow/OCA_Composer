@@ -17,6 +17,24 @@
   box-shadow: 0 6px 12px rgba(255, 152, 0, 0.3);
 }
 
+.placeholder-node.highlighted {
+  border: 3px solid #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3), 0 4px 8px rgba(255, 152, 0, 0.2);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3), 0 4px 8px rgba(255, 152, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.5), 0 4px 8px rgba(255, 152, 0, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3), 0 4px 8px rgba(255, 152, 0, 0.2);
+  }
+}
+
 .placeholder-node-content {
   display: flex;
   flex-direction: column;
@@ -89,6 +107,12 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
 }
 
+.detailed-node.highlighted {
+  border: 3px solid #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3), 0 2px 4px rgba(0, 0, 0, 0.08);
+  animation: pulse 2s infinite;
+}
+
 /* Only apply dashed border to tree view placeholders - but tree view doesn't use detailed-node class */
 /* Left-right view placeholders get orange headers, not dashed borders */
 .detailed-node.placeholder {
@@ -101,7 +125,7 @@
   padding: 8px 12px;
   border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid var(--border-color);
@@ -315,4 +339,150 @@
 
 .react-flow__edge-path {
   cursor: default;
+}
+
+/* Edit schema button styles */
+.edit-schema-button {
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+}
+
+.edit-schema-button:hover {
+  background: #1976d2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+}
+
+.edit-schema-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+}
+
+.edit-schema-button-small {
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 4px;
+  box-shadow: 0 1px 2px rgba(33, 150, 243, 0.2);
+}
+
+.edit-schema-button-small:hover {
+  background: #1976d2;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.edit-schema-button-small:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(33, 150, 243, 0.2);
+}
+
+.edit-schema-button-header {
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+  box-shadow: 0 1px 2px rgba(33, 150, 243, 0.2);
+}
+
+.edit-schema-button-header:hover {
+  background: #1976d2;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.edit-schema-button-header:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(33, 150, 243, 0.2);
+}
+
+/* Icon-based edit button for tree nodes */
+.edit-schema-button-icon {
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  padding: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  min-height: 20px;
+}
+
+.edit-schema-button-icon:hover {
+  background: #1976d2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+}
+
+.edit-schema-button-icon:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+}
+
+/* Tree node styles */
+.tree-node {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 2px solid #ddd;
+  min-width: 100px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.tree-node:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.tree-node.highlighted {
+  border: 2px solid #007bff;
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+  animation: pulse 2s infinite;
+}
+
+.tree-node-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.tree-node-label {
+  font-weight: 500;
+  font-size: 14px;
+  color: #333;
+  white-space: pre-line;
+  text-align: center;
 }

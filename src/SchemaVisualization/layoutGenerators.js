@@ -150,7 +150,8 @@ const getLayoutedElements = (nodes, edges, direction = "TB", viewMode = "detaile
 export const generateTreeLayout = (
   schemaData,
   language = "eng",
-  rootLabel = "Parent Schema"
+  rootLabel = "Parent Schema",
+  currentSchemaId = null
 ) => {
   // Expect attributes as we don't use viz where there is one root and no children
   if (!schemaData || !schemaData.attributes) {
@@ -212,7 +213,7 @@ export const generateTreeLayout = (
         }
       } else if (isRefn) {
         nodeData.children.push({
-          id: `placeholder-${nodeId}-${key}`,
+          id: key, // Use the field name (e.g., "q9") as the node ID
           name: `${labels[key] || key}\n(placeholder child schema)`,
           type: "placeholder",
           children: []
@@ -253,14 +254,14 @@ export const generateTreeLayout = (
       data: {
         label: nodeLabel,
         title: nodeLabel,
-        fields: []
+        fields: [],
+        currentSchemaId,
+        nodeId: nodeData.id
       },
       type:
         nodeData.type === "placeholder"
           ? "placeholderNode"
-          : nodeData.type === "root"
-            ? "input"
-            : "default",
+          : "treeNode",
       className: nodeData.type
     });
 
@@ -313,7 +314,8 @@ export const generateTreeLayout = (
 export const generateDetailedLayout = (
   schemaData,
   language = "eng",
-  rootLabel = "Parent Schema"
+  rootLabel = "Parent Schema",
+  currentSchemaId = null
 ) => {
   if (!schemaData || !schemaData.attributes) {
     return { nodes: [], edges: [] };
@@ -328,17 +330,25 @@ export const generateDetailedLayout = (
   const processNode = (nodeId, nodeType, title, fields, level = 0) => {
     if (allNodes.has(nodeId)) return;
 
+
+
     // No more field processing here - handled in UI component
-    allNodes.set(nodeId, {
+    const nodeData = {
       id: nodeId,
       type: "detailedLR",
       data: {
         title: truncateText(title, 20),
         fields, // Raw fields - truncation handled in UI
-        nodeType
+        nodeType, // Ensure nodeType is explicitly set
+        currentSchemaId,
+        nodeId
       },
       level
-    });
+    };
+
+
+
+    allNodes.set(nodeId, nodeData);
 
     // Process child schemas in this node's fields
     fields.forEach((field) => {
@@ -361,7 +371,7 @@ export const generateDetailedLayout = (
           target: referencedId
         });
       } else if (field.isPlaceholder) {
-        const placeholderId = `placeholder-${nodeId}-${field.originalName}`;
+        const placeholderId = field.originalName || field.name; // Use the field name as the placeholder ID
 
         processNode(placeholderId, "placeholder", field.name, [], level + 1);
 
