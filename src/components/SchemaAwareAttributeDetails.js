@@ -1,19 +1,21 @@
-import React, { useRef, useContext, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useContext, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Box, Typography } from "@mui/material";
-import Grid from "../AttributeDetails/Grid";
+import SchemaAwareGrid from "../AttributeDetails/SchemaAwareGrid";
 import AddAttribute from "../AttributeDetails/AddAttribute";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import { Context } from "../App";
 import BackNextSkeleton from "./BackNextSkeleton";
 import Loading from "./Loading";
 import ErrorPopup from "../ViewSchema/ErrorPopup";
+import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
+import { codesToLanguages } from "../constants/isoCodes";
+import { CustomPalette } from "../constants/customPalette";
 
 /**
  * Schema-Aware Attribute Details Component
  * 
- * This component demonstrates how to refactor existing components to work with
- * the new multi-schema architecture. Instead of using global state, it uses
- * schema-specific state management.
+ * This component handles attribute details for a specific schema with proper state isolation.
  */
 export default function SchemaAwareAttributeDetails({
   pageBack,
@@ -23,12 +25,17 @@ export default function SchemaAwareAttributeDetails({
 }) {
   const { t } = useTranslation();
   
-  // New multi-schema context usage
+  // Multi-schema context
   const {
     activeSchemaId,
     getSchemaState,
-    updateSchemaState,
-    switchToSchema
+    updateSchemaState
+  } = useMultiSchema();
+
+  // Global context for navigation and other global state
+  const {
+    setCurrentPage,
+    OCAPackage
   } = useContext(Context);
 
   // Local state for UI
@@ -40,7 +47,6 @@ export default function SchemaAwareAttributeDetails({
   const [loading, setLoading] = useState(true);
 
   // Refs
-  const navigationSafe = useRef();
   const gridRef = useRef();
   const refContainer = useRef();
   const entryCodesRef = useRef();
@@ -52,165 +58,271 @@ export default function SchemaAwareAttributeDetails({
   // Get current schema state
   const currentSchemaState = getSchemaState(activeSchemaId);
   const attributes = currentSchemaState?.attributes || [];
-  const attributesList = currentSchemaState?.attributesList || [];
+  const entryCodes = currentSchemaState?.entryCodes || {};
+  const lanAttributeRowData = currentSchemaState?.lanAttributeRowData || {};
 
-  // Update canDelete based on current schema's attributes
+  // Initialize component when schema changes
   useEffect(() => {
-    setCanDelete(attributes.length > 1);
-  }, [attributes.length]);
-
-  // Handle adding a new attribute to the current schema
-  const handleAddAttribute = (newAttribute) => {
-    const updatedAttributes = [
-      ...attributes,
-      {
-        Attribute: newAttribute,
-        Flagged: false,
-        List: false,
-        Type: "",
-        Unit: ""
-      }
-    ];
-
-    // Update schema-specific state
-    updateSchemaState(activeSchemaId, {
-      attributes: updatedAttributes,
-      attributesList: updatedAttributes.map(attr => attr.Attribute)
-    });
-  };
-
-  // Handle deleting an attribute from the current schema
-  const handleDeleteAttribute = (attributeName) => {
-    const updatedAttributes = attributes.filter(attr => attr.Attribute !== attributeName);
-    
-    updateSchemaState(activeSchemaId, {
-      attributes: updatedAttributes,
-      attributesList: updatedAttributes.map(attr => attr.Attribute)
-    });
-  };
-
-  // Handle updating an attribute in the current schema
-  const handleUpdateAttribute = (index, field, value) => {
-    const updatedAttributes = [...attributes];
-    updatedAttributes[index] = {
-      ...updatedAttributes[index],
-      [field]: value
-    };
-
-    updateSchemaState(activeSchemaId, {
-      attributes: updatedAttributes
-    });
-  };
-
-  // Navigation handlers
-  const pageBackSave = () => {
-    if (navigationSafe.current === true) {
-      pageBack();
-    }
-  };
-
-  const pageForwardSave = () => {
-    // Validate current schema's attributes before proceeding
-    const hasBlankTypes = attributes.some(attr => !attr.Type);
-    
-    if (hasBlankTypes) {
-      setShowCard(true);
+    if (!activeSchemaId || !OCAPackage) {
+      setLoading(false);
       return;
     }
 
-    // Mark navigation as safe
-    navigationSafe.current = true;
+    const initializeComponent = async () => {
+      try {
+        setLoading(true);
+        
+        // Get schema data for the active schema
+        const schemaData = getSchemaDataById(OCAPackage, activeSchemaId);
+        
+        if (schemaData) {
+          // If schema is not initialized, initialize it
+          if (!currentSchemaState?.initialized) {
+            // The schema will be initialized by the MultiSchemaContext
+            // We just need to wait for it to be ready
+            return;
+          }
+
+          // Update canDelete based on attributes count
+          setCanDelete(attributes.length > 1);
+
+          // Initialize typesObjectRef with loaded types
+          typesObjectRef.current = attributes.reduce((acc, attr) => {
+            acc[attr.Attribute] = attr.Type || "";
+            return acc;
+          }, {});
+
+          setLoading(false);
+        } else {
+          setErrorMessage(t("Schema not found"));
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error initializing SchemaAwareAttributeDetails:", error);
+        setErrorMessage(t("Error loading schema data"));
+        setLoading(false);
+      }
+    };
+
+    initializeComponent();
+  }, [activeSchemaId, OCAPackage, currentSchemaState?.initialized, attributes, t]);
+
+  // Handle attribute updates
+  const handleAttributeUpdate = useCallback((updatedAttributes) => {
+    if (!activeSchemaId) return;
+
+    updateSchemaState(activeSchemaId, {
+      attributes: updatedAttributes,
+      attributesList: updatedAttributes.map(attr => attr.Attribute)
+    });
+
+    // Update canDelete
+    setCanDelete(updatedAttributes.length > 1);
+
+    // Update typesObjectRef
+    typesObjectRef.current = updatedAttributes.reduce((acc, attr) => {
+      acc[attr.Attribute] = attr.Type || "";
+      return acc;
+    }, {});
+  }, [activeSchemaId, updateSchemaState]);
+
+  // Handle entry codes update
+  const handleEntryCodesUpdate = useCallback((updatedEntryCodes) => {
+    if (!activeSchemaId) return;
+
+    updateSchemaState(activeSchemaId, {
+      entryCodes: updatedEntryCodes,
+      attributesWithLists: Object.keys(updatedEntryCodes)
+    });
+  }, [activeSchemaId, updateSchemaState]);
+
+  // Handle language data update
+  const handleLanguageDataUpdate = useCallback((updatedLanguageData) => {
+    if (!activeSchemaId) return;
+
+    updateSchemaState(activeSchemaId, {
+      lanAttributeRowData: updatedLanguageData
+    });
+  }, [activeSchemaId, updateSchemaState]);
+
+  // Handle attribute deletion
+  const handleAttributeDelete = useCallback((deletedAttributes) => {
+    if (!activeSchemaId) return;
+
+    // Update attributes list
+    const updatedAttributes = attributes.filter(
+      attr => !deletedAttributes.includes(attr.Attribute)
+    );
+
+    // Update entry codes
+    const updatedEntryCodes = { ...entryCodes };
+    deletedAttributes.forEach(attrName => {
+      delete updatedEntryCodes[attrName];
+    });
+
+    // Update language data
+    const updatedLanguageData = { ...lanAttributeRowData };
+    Object.keys(updatedLanguageData).forEach(lang => {
+      updatedLanguageData[lang] = updatedLanguageData[lang].filter(
+        item => !deletedAttributes.includes(item.Attribute)
+      );
+    });
+
+    // Update schema state
+    updateSchemaState(activeSchemaId, {
+      attributes: updatedAttributes,
+      attributesList: updatedAttributes.map(attr => attr.Attribute),
+      entryCodes: updatedEntryCodes,
+      attributesWithLists: Object.keys(updatedEntryCodes),
+      lanAttributeRowData: updatedLanguageData
+    });
+
+    // Update canDelete
+    setCanDelete(updatedAttributes.length > 1);
+  }, [activeSchemaId, attributes, entryCodes, lanAttributeRowData, updateSchemaState]);
+
+  // Navigation handlers
+  const handlePageBack = () => {
+    pageBack();
+  };
+
+  const handlePageForward = () => {
+    // Validate that we have attributes
+    if (!attributes || attributes.length === 0) {
+      setErrorMessage(t("Please add at least one attribute"));
+      return;
+    }
+
+    // Validate attribute names
+    const invalidAttributes = attributes.filter(attr => 
+      !attr.Attribute || attr.Attribute.trim() === ""
+    );
+    
+    if (invalidAttributes.length > 0) {
+      setErrorMessage(t("All attributes must have names"));
+      return;
+    }
+
+    // Check for duplicate attribute names
+    const attributeNames = attributes.map(attr => attr.Attribute);
+    const uniqueNames = new Set(attributeNames);
+    if (uniqueNames.size !== attributeNames.length) {
+      setErrorMessage(t("Attribute names must be unique"));
+      return;
+    }
+
+    // Clear any errors and proceed
+    setErrorMessage("");
     pageForward();
   };
 
-  // Loading state
-  useEffect(() => {
-    if (attributes.length > 0) {
-      setLoading(false);
-    }
-  }, [attributes]);
+  if (loading) {
+    return <Loading />;
+  }
+
+  if (!activeSchemaId) {
+    return (
+      <BackNextSkeleton isBack pageBack={handlePageBack}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {t("No active schema selected")}
+        </Alert>
+      </BackNextSkeleton>
+    );
+  }
 
   return (
     <BackNextSkeleton
       isBack
-      pageBack={pageBackSave}
+      pageBack={handlePageBack}
       isForward
-      pageForward={pageForwardSave}
+      pageForward={handlePageForward}
     >
-      {loading && attributes.length > 40 && <Loading />}
-      
-      {showCard && (
-        <ErrorPopup onClose={() => setShowCard(false)}>
-          <Box>
-            <Typography variant="h5" sx={{ mb: 1 }}>
-              {t("There are one or more blank entries in the Type column.")}
-            </Typography>
-            <Typography variant="h6" fontWeight="semibold">
-              {t("Please provide valid data types for all attributes.")}
-            </Typography>
-          </Box>
-        </ErrorPopup>
-      )}
-      
-      {errorMessage.length > 0 && (
-        <Alert
-          severity="error"
-          style={{
-            position: "fixed",
-            top: 10,
-            left: 100,
-            right: 100,
-            zIndex: 9999
-          }}
-        >
-          {errorMessage}
-        </Alert>
-      )}
-
       {/* Schema indicator */}
-      <Box sx={{ mb: 2, p: 2, bgcolor: 'primary.light', borderRadius: 1 }}>
+      <Box sx={{ mb: 2, p: 2, bgcolor: "primary.light", borderRadius: 1 }}>
         <Typography variant="h6" color="white">
           {t("Editing Schema")}: {currentSchemaState?.metadata?.name || activeSchemaId}
         </Typography>
         <Typography variant="body2" color="white">
           {t("Attributes")}: {attributes.length}
         </Typography>
+        {Object.keys(entryCodes).length > 0 && (
+          <Typography variant="body2" color="white">
+            {t("Attributes with Entry Codes")}: {Object.keys(entryCodes).length}
+          </Typography>
+        )}
       </Box>
 
-      <div ref={refContainer}>
-        <Grid
-          gridRef={gridRef}
-          addButton1={addButton1}
-          addButton2={addButton2}
-          setErrorMessage={setErrorMessage}
-          canDelete={canDelete}
-          setCanDelete={setCanDelete}
+      {/* Error display */}
+      {errorMessage && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErrorMessage("")}>
+          {errorMessage}
+        </Alert>
+      )}
+
+      {/* Add Attribute Section */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ mb: 2, color: CustomPalette.PRIMARY }}>
+          {t("Add Attribute")}
+        </Typography>
+        <AddAttribute
+          showAddAttribute={showAddAttribute}
+          setShowAddAttribute={setShowAddAttribute}
+          addByTab={addByTab}
           setAddByTab={setAddByTab}
-          typesObjectRef={typesObjectRef}
-          setLoading={setLoading}
-          // Pass schema-specific data
-          attributes={attributes}
-          onAddAttribute={handleAddAttribute}
-          onDeleteAttribute={handleDeleteAttribute}
-          onUpdateAttribute={handleUpdateAttribute}
+          onAttributeAdd={(newAttribute) => {
+            const updatedAttributes = [...attributes, newAttribute];
+            handleAttributeUpdate(updatedAttributes);
+            setShowAddAttribute(false);
+          }}
+          refs={{ addButton1, addButton2 }}
         />
-      </div>
-      
-      <AddAttribute
-        addButton1={addButton1}
-        addButton2={addButton2}
-        gridRef={gridRef}
-        setErrorMessage={setErrorMessage}
-        setCanDelete={setCanDelete}
-        showAddAttribute={showAddAttribute}
-        setShowAddAttribute={setShowAddAttribute}
-        addByTab={addByTab}
-        setAddByTab={setAddByTab}
-        typesObjectRef={typesObjectRef}
-        // Pass schema-specific handlers
-        onAddAttribute={handleAddAttribute}
-        currentAttributes={attributes}
-      />
+      </Box>
+
+      {/* Attributes Grid */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ mb: 2, color: CustomPalette.PRIMARY }}>
+          {t("Attribute Details")}
+        </Typography>
+        <SchemaAwareGrid
+          ref={gridRef}
+          attributes={attributes}
+          entryCodes={entryCodes}
+          lanAttributeRowData={lanAttributeRowData}
+          canDelete={canDelete}
+          onAttributeUpdate={handleAttributeUpdate}
+          onEntryCodesUpdate={handleEntryCodesUpdate}
+          onLanguageDataUpdate={handleLanguageDataUpdate}
+          onAttributeDelete={handleAttributeDelete}
+          typesObjectRef={typesObjectRef}
+          refs={{ refContainer, entryCodesRef, typeBlanksRef }}
+        />
+      </Box>
+
+      {/* Entry Codes Section */}
+      {Object.keys(entryCodes).length > 0 && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" sx={{ mb: 2, color: CustomPalette.PRIMARY }}>
+            {t("Entry Codes")}
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, color: CustomPalette.GREY_600 }}>
+            {t("Configure entry codes for attributes with predefined values")}
+          </Typography>
+          {/* Entry codes component would go here */}
+        </Box>
+      )}
+
+      {/* Language Details Section */}
+      {Object.keys(lanAttributeRowData).length > 0 && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" sx={{ mb: 2, color: CustomPalette.PRIMARY }}>
+            {t("Language-dependent Attribute Details")}
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, color: CustomPalette.GREY_600 }}>
+            {t("Configure labels and descriptions for different languages")}
+          </Typography>
+          {/* Language details component would go here */}
+        </Box>
+      )}
     </BackNextSkeleton>
   );
 }

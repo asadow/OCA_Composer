@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useContext } from "react";
 import "./App.css";
 import { Box } from "@mui/material";
 import StartSchema from "./StartSchema/StartSchema";
@@ -11,7 +11,7 @@ import CreateManually from "./CreateManually/CreateManually";
 import Overlays from "./Overlays/Overlays";
 import CharacterEncoding from "./Overlays/CharacterEncoding";
 import RequiredEntries from "./Overlays/RequiredEntries";
-import { pagesArray } from "./App";
+import { pagesArray, Context } from "./App";
 import Cardinality from "./Overlays/Cardinality";
 import UnitFraming from "./Overlays/UnitFraming";
 import FormatRulesV2 from "./Overlays/FormatRuleV2";
@@ -24,6 +24,8 @@ import StepperProgressIndicator from "./StepperProgressIndicator/StepperProgress
 import DataStandards from "./Overlays/DataStandards";
 import Range from "./Overlays/Range";
 import AttributeFraming from "./Overlays/AttributeFraming";
+import { useMultiSchema } from "./context/MultiSchemaContext";
+
 
 const Home = ({
   currentPage,
@@ -33,6 +35,29 @@ const Home = ({
   showIntroCard,
   setShowIntroCard
 }) => {
+  // Get context to check if we're editing a specific schema
+  const { editingSchemaId, OCAPackage } = useContext(Context);
+  const { activeSchemaId, setCurrentPackageId, loadFromLocalStorage } = useMultiSchema();
+
+  // Register current package fingerprint for persistence namespace
+  useEffect(() => {
+    const computePackageId = (pkg) => {
+      if (!pkg) return null;
+      const root = pkg.bundle?.d || "root";
+      const deps = (pkg.dependencies || []).map((d) => d?.d).filter(Boolean).sort().join("|");
+      return `${root}::${deps}`;
+    };
+    const id = computePackageId(OCAPackage);
+    setCurrentPackageId(id);
+    
+    // Try to load saved state for this package
+    if (id) {
+      loadFromLocalStorage(id);
+    }
+  }, [OCAPackage, setCurrentPackageId, loadFromLocalStorage]);
+  
+  // Determine if we should use schema-aware components
+  const isEditingSpecificSchema = editingSchemaId || activeSchemaId;
   const [activeStep, setActiveStep] = useState(0);
   const [steps, setSteps] = useState([
     { label: "Schema Metadata", page: "Metadata" },
@@ -66,41 +91,17 @@ const Home = ({
   };
 
   // Add new page to this list
-  const allowedPages = useMemo(
-    () => [
-      ...pagesArray,
-      "Codes",
-      "Create",
-      "Overlays",
-      "CharacterEncoding",
-      "RequiredEntries",
-      "FormatRules",
-      "Cardinality",
-      "UnitFraming",
-      "UploadEntryCodes",
-      "MatchingEntryCodes",
-      "MatchingJSONEntryCodes",
-      "DataStandards",
-      "Range",
-      "AttributeFraming"
-    ],
-    []
-  );
+  const allowedPages = useMemo(() => {
+    return steps.map((step) => step.page);
+  }, [steps]);
 
-  if (!allowedPages.includes(currentPage)) {
-    setCurrentPage("Start");
-  }
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  // Sync stepper with the current page
+  // Update active step based on current page
   useEffect(() => {
     const stepIndex = steps.findIndex((step) => step.page === currentPage);
-    if (stepIndex === -1) return;
-    setActiveStep(stepIndex);
-  }, [steps, currentPage]);
+    if (stepIndex !== -1) {
+      setActiveStep(stepIndex);
+    }
+  }, [currentPage, steps]);
 
   return (
     <>
@@ -134,21 +135,14 @@ const Home = ({
         {currentPage === "View" && <ViewSchema pageBack={pageBack} addClearButton />}
         {currentPage === "Create" && <CreateManually />}
         {currentPage === "Overlays" && (
-          <Overlays pageBack={pageBack} pageForward={pageForward} />
+          <Overlays
+            pageBack={pageBack}
+            pageForward={pageForward}
+          />
         )}
-        {currentPage === "CharacterEncoding" && <CharacterEncoding />}
-        {currentPage === "RequiredEntries" && <RequiredEntries />}
-        {currentPage === "FormatRules" && <FormatRulesV2 />}
-        {currentPage === "Cardinality" && <Cardinality />}
-        {currentPage === "UnitFraming" && <UnitFraming />}
-        {currentPage === "UploadEntryCodes" && <UploadPage />}
-        {currentPage === "MatchingEntryCodes" && <MatchingEntryCodeHeader />}
-        {currentPage === "MatchingJSONEntryCodes" && <MatchingJSONEntryCodeHeader />}
-        {currentPage === "DataStandards" && <DataStandards />}
-        {currentPage === "Range" && <Range />}
-        {currentPage === "AttributeFraming" && <AttributeFraming />}
+
       </Box>
-      <Footer currentPage={currentPage} />
+      <Footer />
     </>
   );
 };

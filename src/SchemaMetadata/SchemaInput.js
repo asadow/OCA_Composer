@@ -37,11 +37,7 @@ export default function SchemaInput({
   const schemaName = currentSchemaData?.schemaName || currentSchemaData?.fieldName || editingSchemaId;
   const currentSchemaDescription = currentSchemaData?.schemaDescription || "";
   
-  console.log("SchemaInput - editingSchemaId:", editingSchemaId);
-  console.log("SchemaInput - currentSchemaData:", currentSchemaData);
-  console.log("SchemaInput - schemaName:", schemaName);
-  console.log("SchemaInput - language:", language);
-  console.log("SchemaInput - currentSchemaDescription:", currentSchemaDescription);
+  // Debug logs removed to reduce console noise during schema-aware editing
 
   const handleNameField = (e) => {
     e.preventDefault();

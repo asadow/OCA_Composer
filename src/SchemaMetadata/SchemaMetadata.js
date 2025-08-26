@@ -1,6 +1,6 @@
 import { Box, Button, Typography, Tooltip } from "@mui/material";
 import React, { useState, useContext, useEffect, useRef } from "react";
-import Attributes from "./Attributes";
+
 import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
@@ -135,34 +135,7 @@ export default function SchemaMetadata({
           width: "100%",
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            color: CustomPalette.GREY_600,
-          }}
-        >
-          <Typography
-            sx={{
-              fontSize: 20,
-              fontWeight: "bold",
-              textAlign: "left",
-              margin: "1rem 0 1rem 0",
-              color: CustomPalette.PRIMARY,
-              width: "7rem",
-            }}
-          >
-            {t('Attributes')}
-          </Typography>
-          <Tooltip
-            title={t("The list of attributes correspond to the column headers of a data file")}
-            placement="right"
-            arrow
-          >
-            <HelpOutlineIcon sx={{ fontSize: 15 }} />
-          </Tooltip>
-        </Box>
-        <Attributes />
+
         <Box sx={{ display: "flex", justifyContent: 'space-between' }}>
           <Typography
             sx={{

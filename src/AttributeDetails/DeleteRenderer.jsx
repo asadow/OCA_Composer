@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useContext } from "react";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { CustomPalette } from "../constants/customPalette";
+import { Context } from "../App";
 
 const DeleteRenderer = ({
   data,
@@ -11,31 +12,44 @@ const DeleteRenderer = ({
   canDelete,
   setCanDelete
 }) => {
+  const { attributeRowData } = useContext(Context);
+
   const handleDeleteClick = () => {
     gridRef.current.api.stopEditing();
-    const newAttributeRowData = JSON.parse(JSON.stringify(gridRef.current.props.rowData));
+    
+    // Use the global context data instead of gridRef.current.props.rowData
+    const currentRowData = attributeRowData || [];
+    const newAttributeRowData = JSON.parse(JSON.stringify(currentRowData));
+    
+    // Update types from typesObjectRef
     newAttributeRowData.forEach((item) => {
       item.Type = typesObjectRef.current[item.Attribute] || "";
     });
-    const allAttributes = [];
-    gridRef.current.props.rowData.forEach((row) => allAttributes.push(row.Attribute));
+    
+    // Find and remove the attribute
+    const allAttributes = newAttributeRowData.map((row) => row.Attribute);
     const index = allAttributes.indexOf(data.Attribute);
+    
     if (index > -1) {
-      allAttributes.splice(index, 1);
-      setAttributesList(allAttributes);
-      setAttributeRowData([...newAttributeRowData]);
-    }
-    if (allAttributes.length <= 1) {
-      setCanDelete(false);
+      newAttributeRowData.splice(index, 1);
+      const updatedAttributesList = newAttributeRowData.map((row) => row.Attribute);
+      
+      setAttributesList(updatedAttributesList);
+      setAttributeRowData(newAttributeRowData);
+      
+      // Update canDelete based on remaining attributes (allow deletion down to 0)
+      setCanDelete(newAttributeRowData.length > 0);
     }
   };
+  
   return (
     canDelete && (
       <DeleteOutlineIcon
         sx={{
           pr: 1,
           color: CustomPalette.GREY_600,
-          transition: "all 0.2s ease-in-out"
+          transition: "all 0.2s ease-in-out",
+          cursor: "pointer"
         }}
         onClick={handleDeleteClick}
       />

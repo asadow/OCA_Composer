@@ -77,14 +77,17 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
       if (!newLanAttributeRowData[language]) {
         const newLanguageList = [];
         attributesList.forEach((item) => {
-          let listDisplay = attributeRowData.find((obj) => obj.Attribute === item).List;
+          const attrObj = attributeRowData.find((obj) => obj.Attribute === item) || {};
+          let listDisplay = attrObj.List;
           if (!listDisplay) {
             listDisplay = "Not a List";
           } else {
             const listDisplayArray = [];
-            savedEntryCodes[item].forEach((i) => {
-              listDisplayArray.push(i[language]);
-            });
+            if (savedEntryCodes[item]) {
+              savedEntryCodes[item].forEach((i) => {
+                listDisplayArray.push(i[language]);
+              });
+            }
             const listDisplayString = listDisplayArray.join(" | ");
             listDisplay = listDisplayString;
           }
@@ -120,9 +123,11 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
             listDisplay = "Not a List";
           } else {
             const listDisplayArray = [];
-            savedEntryCodes[item.Attribute].forEach((i) => {
-              listDisplayArray.push(i[language]);
-            });
+            if (savedEntryCodes[item.Attribute]) {
+              savedEntryCodes[item.Attribute].forEach((i) => {
+                listDisplayArray.push(i[language]);
+              });
+            }
             const listDisplayString = listDisplayArray.join(" | ");
             listDisplay = listDisplayString;
           }

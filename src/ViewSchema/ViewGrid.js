@@ -101,7 +101,7 @@ export const ListRenderer = memo((props) => {
   );
 });
 
-export default function ViewGrid({ displayArray, currentLanguage, setLoading }) {
+export default function ViewGrid({ displayArray, currentLanguage, setLoading = () => {} }) {
   const { t } = useTranslation();
   const { overlay, cardinalityData, OCAPackage } = useContext(Context);
   const [columnDefs, setColumnDefs] = useState([]);
@@ -112,8 +112,10 @@ export default function ViewGrid({ displayArray, currentLanguage, setLoading }) 
       ?.overlays?.[UNIT_FRAMING];
 
   const onGridReady = useCallback(() => {
-    setLoading(false);
-  }, []);
+    if (setLoading) {
+      setLoading(false);
+    }
+  }, [setLoading]);
 
   useEffect(() => {
     const getColumns = () => {
@@ -308,9 +310,10 @@ export default function ViewGrid({ displayArray, currentLanguage, setLoading }) 
     const newCardinalityData = JSON.parse(JSON.stringify(cardinalityData));
 
     newRowData.forEach((item, index) => {
-      item.Description = item.Description[currentLanguage];
-      item.Label = item.Label[currentLanguage];
-      item.List = item.List[currentLanguage];
+      // Add null checks to prevent errors
+      item.Description = item.Description && item.Description[currentLanguage] ? item.Description[currentLanguage] : "";
+      item.Label = item.Label && item.Label[currentLanguage] ? item.Label[currentLanguage] : "";
+      item.List = item.List && item.List[currentLanguage] ? item.List[currentLanguage] : "Not a List";
 
       if (newCardinalityData[index] && newCardinalityData[index].EntryLimit) {
         item.Cardinality = newCardinalityData[index].EntryLimit;

@@ -117,12 +117,16 @@ const useExportLogicV2 = () => {
     attributesList.forEach((item, index) => {
       const rowObject = {};
       rowObject.Attribute = item;
-      rowObject.Flagged = attributeRowData[index].Flagged ? "Y" : "";
-      rowObject.Unit = attributeRowData[index].Unit;
-      rowObject.Type = attributeRowData[index].Type;
-      rowObject.Label = lanAttributeRowData[language][index].Label;
-      rowObject.Description = lanAttributeRowData[language][index].Description;
-      rowObject.List = lanAttributeRowData[language][index].List;
+      // Defensive reads to avoid crashes when grids are not yet synced
+      const attrRow = attributeRowData[index] || {};
+      const lanRows = lanAttributeRowData?.[language] || [];
+      const lanRow = lanRows[index] || {};
+      rowObject.Flagged = attrRow.Flagged ? "Y" : "";
+      rowObject.Unit = attrRow.Unit || "";
+      rowObject.Type = attrRow.Type || "";
+      rowObject.Label = lanRow.Label || "";
+      rowObject.Description = lanRow.Description || "";
+      rowObject.List = lanRow.List || (attrRow.List ? "" : "Not a List");
       rowObject.Language = language;
       rowData.push(rowObject);
     });

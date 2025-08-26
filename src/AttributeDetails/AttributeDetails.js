@@ -83,9 +83,21 @@ export default function AttributeDetails({
              entryOverlay.attribute_entries[key]
            );
          
+                   // Handle schema references (refs/refn) - these should be "Child Schema" not a type
+          let displayType = value;
+          if (Array.isArray(value)) {
+            // If it's an array, format it as "Array[Type]" (e.g., ["Text"] -> "Array[Text]")
+            const arrayType = value[0] || "Unknown";
+            displayType = `Array[${arrayType}]`;
+            console.log("Array value:", value, "Formatted result:", displayType);
+          }
+          if (displayType && (displayType.startsWith('refs:') || displayType.startsWith('refn:'))) {
+            displayType = "Child Schema";
+          }
+         
          return {
            Attribute: key,
-           Type: Array.isArray(value) ? value[0] : value,
+           Type: displayType,
            Description: "",
            Required: false,
            EntryCodes: [],

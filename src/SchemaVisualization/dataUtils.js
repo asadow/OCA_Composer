@@ -144,7 +144,9 @@ export const getSchemaDataById = (ocaPackage, schemaId, language = "eng") => {
     return null;
   }
 
-  // If it's the root schema (either by digest or by "root" ID)
+
+
+  // If it's the root schema (either by digest, by "root" ID, or by schema name)
   if (schemaId === ocaPackage.bundle?.d || schemaId === "root") {
     // Get the schema name and description from meta overlays
     const metaOverlay = ocaPackage.bundle.overlays?.meta?.find((m) => m.language === language) || 
@@ -162,8 +164,32 @@ export const getSchemaDataById = (ocaPackage, schemaId, language = "eng") => {
     };
   }
 
-  // If it's a dependency schema
-  const dependency = ocaPackage.dependencies?.find((dep) => dep.d === schemaId);
+  // Check if it's the root schema by name (e.g., "sample_questionnaire")
+  const rootMetaOverlay = ocaPackage.bundle.overlays?.meta?.find((m) => m.language === language) || 
+                         ocaPackage.bundle.overlays?.meta?.[0];
+  if (rootMetaOverlay?.name === schemaId) {
+    return {
+      schemaId: ocaPackage.bundle.d || "root",
+      schemaName: rootMetaOverlay.name,
+      schemaDescription: rootMetaOverlay.description || "",
+      attributes: ocaPackage.bundle.capture_base?.attributes || {},
+      overlays: ocaPackage.bundle.overlays || {},
+      labels: ocaPackage.bundle.overlays?.label?.find((l) => l.language === language)?.attribute_labels || {}
+    };
+  }
+
+  // If it's a dependency schema - try to find by digest first
+  let dependency = ocaPackage.dependencies?.find((dep) => dep.d === schemaId);
+  
+  // If not found by digest, try to find by name in meta overlays
+  if (!dependency && ocaPackage.dependencies) {
+    dependency = ocaPackage.dependencies.find((dep) => {
+      const metaOverlay = dep.overlays?.meta?.find((m) => m.language === language) || 
+                         dep.overlays?.meta?.[0];
+      return metaOverlay?.name === schemaId;
+    });
+  }
+
   if (dependency) {
     // Get the schema name and description from meta overlays
     const metaOverlay = dependency.overlays?.meta?.find((m) => m.language === language) || 

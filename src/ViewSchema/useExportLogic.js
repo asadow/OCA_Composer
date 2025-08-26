@@ -87,19 +87,19 @@ const useExportLogic = () => {
   OCADataArray.push(OCADescriptionData);
 
   // CAPTURE ATTRIBUTE SHEET DATA
-  if (Object.keys(lanAttributeRowData).length > 0) {
+  if (lanAttributeRowData && Object.keys(lanAttributeRowData).length > 0) {
     languages.forEach((language) => {
       const rowData = [];
-
+      const byLang = lanAttributeRowData[language] || [];
       attributesList.forEach((item, index) => {
         const rowObject = {};
         rowObject.Attribute = item;
-        rowObject.Flagged = attributeRowData[index]?.Flagged ? "Y" : "";
-        rowObject.Unit = attributeRowData[index]?.Unit;
-        rowObject.Type = attributeRowData[index]?.Type;
-        rowObject.Label = lanAttributeRowData[language][index]?.Label;
-        rowObject.Description = lanAttributeRowData[language][index]?.Description;
-        rowObject.List = lanAttributeRowData[language][index]?.List;
+        rowObject.Flagged = attributeRowData?.[index]?.Flagged ? "Y" : "";
+        rowObject.Unit = attributeRowData?.[index]?.Unit || "";
+        rowObject.Type = attributeRowData?.[index]?.Type || "";
+        rowObject.Label = byLang?.[index]?.Label || "";
+        rowObject.Description = byLang?.[index]?.Description || "";
+        rowObject.List = byLang?.[index]?.List || false;
         rowObject.Language = language;
         rowData.push(rowObject);
       });

@@ -174,7 +174,7 @@ export default function Grid({
         width: 60
       }
     ]);
-  }, [attributesList]);
+  }, [attributesList, attributeRowData, canDelete, typesObjectRef]);
 
   const defaultColDef = {
     width: 125
