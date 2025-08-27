@@ -47,11 +47,14 @@ const SchemaVisualizationEmbed = ({
   const reactFlowInstanceRef = useRef(null);
 
   // Handle node clicks for schema navigation
-  const handleNodeClick = useCallback((nodeId) => {
-    if (setCurrentSchemaId) {
-      setCurrentSchemaId(nodeId);
-    }
-  }, [setCurrentSchemaId]);
+  const handleNodeClick = useCallback(
+    (nodeId) => {
+      if (setCurrentSchemaId) {
+        setCurrentSchemaId(nodeId);
+      }
+    },
+    [setCurrentSchemaId]
+  );
 
   // React Flow event handlers
   const onNodesChange = (changes) =>
@@ -165,24 +168,66 @@ const SchemaVisualizationEmbed = ({
           schemaName = metaOverlay.name;
         }
       }
-             if (internalViewMode === "tree") {
-         result = generateTreeLayout(processedSchemaData, languageCode, schemaName, currentSchemaId);
-       } else {
-         result = generateDetailedLayout(processedSchemaData, languageCode, schemaName, currentSchemaId);
-       }
-       
-       // Add click handlers to nodes
-       if (result?.nodes) {
-         result.nodes = result.nodes.map((node) => ({
-           ...node,
-           data: {
-             ...node.data,
-             onNodeClick: handleNodeClick,
-             currentSchemaId: currentSchemaId,
-             nodeId: node.id
-           }
-         }));
-       }
+      if (internalViewMode === "tree") {
+        result = generateTreeLayout(
+          processedSchemaData,
+          languageCode,
+          schemaName,
+          currentSchemaId
+        );
+      } else {
+        result = generateDetailedLayout(
+          processedSchemaData,
+          languageCode,
+          schemaName,
+          currentSchemaId
+        );
+      }
+
+      // Add click handlers and normalized highlighting to nodes
+      if (result?.nodes) {
+        const rootId = ocaPackage?.bundle?.d;
+        // Build a name -> digest map from dependency meta overlays
+        const nameToId = new Map();
+        (ocaPackage?.dependencies || []).forEach((dep) => {
+          const meta = dep?.overlays?.meta;
+          if (Array.isArray(meta)) {
+            meta.forEach((m) => {
+              if (m?.name) nameToId.set(m.name, dep.d);
+            });
+          }
+        });
+
+        // Normalize current id: if it's a display name map to digest; default to root
+        let normalizedCurrentId = currentSchemaId;
+        if (!normalizedCurrentId && rootId) normalizedCurrentId = rootId;
+        if (normalizedCurrentId && nameToId.has(normalizedCurrentId)) {
+          normalizedCurrentId = nameToId.get(normalizedCurrentId);
+        }
+
+        result.nodes = result.nodes.map((node) => {
+          const isRoot = node.id === "root";
+          const shouldHighlight =
+            (isRoot && normalizedCurrentId === rootId) ||
+            (!isRoot && normalizedCurrentId && node.id === normalizedCurrentId);
+
+          // Merge/append highlighted className so CSS can style it
+          const mergedClass =
+            `${node.className || ""} ${shouldHighlight ? "highlighted" : ""}`.trim();
+
+          return {
+            ...node,
+            className: mergedClass,
+            data: {
+              ...node.data,
+              onNodeClick: handleNodeClick,
+              currentSchemaId: normalizedCurrentId,
+              nodeId: node.id,
+              rootId
+            }
+          };
+        });
+      }
       if (result?.nodes && result?.edges) {
         setNodes(result.nodes);
         setEdges(result.edges);
@@ -207,7 +252,7 @@ const SchemaVisualizationEmbed = ({
     const ocaPackage = getOCAPackage();
     if (ocaPackage && ocaPackage.dependencies && ocaPackage.dependencies.length > 0) {
       generateLayout();
-      
+
       // Set initial currentSchemaId to the root schema if not already set
       // Only set if we're not already on a specific schema
       if (!currentSchemaId && setCurrentSchemaId && ocaPackage.bundle?.d) {

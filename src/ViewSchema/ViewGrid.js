@@ -101,7 +101,11 @@ export const ListRenderer = memo((props) => {
   );
 });
 
-export default function ViewGrid({ displayArray, currentLanguage, setLoading = () => {} }) {
+export default function ViewGrid({
+  displayArray,
+  currentLanguage,
+  setLoading = () => {}
+}) {
   const { t } = useTranslation();
   const { overlay, cardinalityData, OCAPackage } = useContext(Context);
   const [columnDefs, setColumnDefs] = useState([]);
@@ -198,6 +202,16 @@ export default function ViewGrid({ displayArray, currentLanguage, setLoading = (
             helpText: t("This is a language specific description of the attribute...")
           }
         },
+        // Character Encoding follows (in case overlay not selected)
+        {
+          field: "Character Encoding",
+          width: 180,
+          autoHeight: true,
+          headerComponent: CellHeader,
+          headerComponentParams: {
+            headerText: t("Character Encoding")
+          }
+        },
         {
           field: "List",
           headerName: t("List"),
@@ -285,16 +299,32 @@ export default function ViewGrid({ displayArray, currentLanguage, setLoading = (
             }
           });
         } else {
+          // Map overlay feature names to actual data fields when needed
+          const normalized = (feature || "").toString().toLowerCase();
+          const isFormat =
+            normalized === "format rules" ||
+            normalized === "format rule" ||
+            normalized === "add format rule for data";
+          const isRequired =
+            normalized === "make selected entries required" ||
+            normalized === "required entry" ||
+            normalized === "required";
+          const mappedField = isFormat
+            ? "Format Rule"
+            : isRequired
+              ? "Required"
+              : feature;
+          const useCheckbox = isRequired || feature === "Make selected entries required";
+
           predefinedColumns.push({
-            field: feature,
+            field: mappedField,
             width: 160,
             autoHeight: true,
             headerComponent: SelectedFeatureHeader,
             headerComponentParams: {
               feature
             },
-            cellRenderer:
-              feature === "Make selected entries required" ? CheckboxRenderer : null
+            cellRenderer: useCheckbox ? CheckboxRenderer : null
           });
         }
       });
@@ -311,9 +341,16 @@ export default function ViewGrid({ displayArray, currentLanguage, setLoading = (
 
     newRowData.forEach((item, index) => {
       // Add null checks to prevent errors
-      item.Description = item.Description && item.Description[currentLanguage] ? item.Description[currentLanguage] : "";
-      item.Label = item.Label && item.Label[currentLanguage] ? item.Label[currentLanguage] : "";
-      item.List = item.List && item.List[currentLanguage] ? item.List[currentLanguage] : "Not a List";
+      item.Description =
+        item.Description && item.Description[currentLanguage]
+          ? item.Description[currentLanguage]
+          : "";
+      item.Label =
+        item.Label && item.Label[currentLanguage] ? item.Label[currentLanguage] : "";
+      item.List =
+        item.List && item.List[currentLanguage]
+          ? item.List[currentLanguage]
+          : "Not a List";
 
       if (newCardinalityData[index] && newCardinalityData[index].EntryLimit) {
         item.Cardinality = newCardinalityData[index].EntryLimit;

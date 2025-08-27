@@ -38,17 +38,21 @@ const FieldHandle = ({ field }) => (
  * Placeholder Node Component - represents potential extension points
  */
 export const PlaceholderNode = ({ data }) => {
-  const isCurrentSchema = data.currentSchemaId === data.nodeId;
-  const isHighlighted = isCurrentSchema;
-  
+  const isRootNode = data.nodeId === "root";
+  const isHighlighted = isRootNode
+    ? data.currentSchemaId === data.rootId || data.currentSchemaId === "root"
+    : data.currentSchemaId === data.nodeId;
+
   return (
     <div className={`placeholder-node ${isHighlighted ? "highlighted" : ""}`}>
       <Handle type="target" position={Position.Top} />
       <div className="placeholder-node-content">
         <div className="placeholder-icon">📝</div>
-        <div className="placeholder-label">{data.label || "Placeholder Child Schema"}</div>
+        <div className="placeholder-label">
+          {data.label || "Placeholder Child Schema"}
+        </div>
         {data.onNodeClick && (
-          <button 
+          <button
             type="button"
             className="edit-schema-button-icon"
             onClick={(e) => {
@@ -69,9 +73,11 @@ export const PlaceholderNode = ({ data }) => {
  * Tree Node Component - represents schema entities in tree view
  */
 export const TreeNode = ({ data }) => {
-  const isCurrentSchema = data.currentSchemaId === data.nodeId;
-  const isHighlighted = isCurrentSchema;
-  
+  const isRootNode = data.nodeId === "root";
+  const isHighlighted = isRootNode
+    ? data.currentSchemaId === data.rootId || data.currentSchemaId === "root"
+    : data.currentSchemaId === data.nodeId;
+
   return (
     <div className={`tree-node ${isHighlighted ? "highlighted" : ""}`}>
       <Handle type="target" position={Position.Top} />
@@ -79,7 +85,7 @@ export const TreeNode = ({ data }) => {
       <div className="tree-node-content">
         <div className="tree-node-label">{data.label}</div>
         {data.onNodeClick && (
-          <button 
+          <button
             type="button"
             className="edit-schema-button-icon"
             onClick={(e) => {
@@ -143,8 +149,10 @@ export const DetailedNode = ({ data }) => {
   // Only show toolbar if there's actually content to display
   const showToolbar = truncatedFields.length > 0 || hiddenFieldsCount > 0;
 
-  const isCurrentSchema = data.currentSchemaId === data.nodeId;
-  const isHighlighted = isCurrentSchema;
+  const isRootNode = data.nodeId === "root";
+  const isHighlighted = isRootNode
+    ? data.currentSchemaId === data.rootId || data.currentSchemaId === "root"
+    : data.currentSchemaId === data.nodeId;
 
   return (
     <>
@@ -194,7 +202,7 @@ export const DetailedNode = ({ data }) => {
         <div className="detailed-header">
           <span>{title}</span>
           {data.onNodeClick && (
-            <button 
+            <button
               type="button"
               className="edit-schema-button-header"
               onClick={(e) => {

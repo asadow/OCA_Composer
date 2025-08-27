@@ -18,20 +18,20 @@
 }
 
 .placeholder-node.highlighted {
-  border: 3px solid #4CBB17; /* green highlight */
-  box-shadow: 0 0 0 2px rgba(76, 187, 23, 0.25), 0 4px 8px rgba(76, 187, 23, 0.15);
+  /* emphasize glow only */
+  box-shadow: 0 0 0 4px rgba(148, 0, 42, 0.35), 0 4px 10px rgba(148, 0, 42, 0.25);
   animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3), 0 4px 8px rgba(255, 152, 0, 0.2);
+    box-shadow: 0 0 0 2px rgba(148, 0, 42, 0.25), 0 4px 8px rgba(148, 0, 42, 0.15);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.5), 0 4px 8px rgba(255, 152, 0, 0.2);
+    box-shadow: 0 0 0 6px rgba(148, 0, 42, 0.45), 0 6px 12px rgba(148, 0, 42, 0.25);
   }
   100% {
-    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3), 0 4px 8px rgba(255, 152, 0, 0.2);
+    box-shadow: 0 0 0 2px rgba(148, 0, 42, 0.25), 0 4px 8px rgba(148, 0, 42, 0.15);
   }
 }
 
@@ -108,8 +108,8 @@
 }
 
 .detailed-node.highlighted {
-  border: 3px solid #4CBB17; /* green */
-  box-shadow: 0 0 0 2px rgba(76, 187, 23, 0.25), 0 2px 4px rgba(0, 0, 0, 0.08);
+  /* remove border override; show dark red glow only */
+  box-shadow: 0 0 0 4px rgba(148, 0, 42, 0.35), 0 2px 6px rgba(0, 0, 0, 0.12);
   animation: pulse 2s infinite;
 }
 
@@ -467,8 +467,8 @@
 }
 
 .tree-node.highlighted {
-  border: 2px solid #4CBB17;
-  box-shadow: 0 0 10px rgba(76, 187, 23, 0.5);
+  /* keep default border; add dark red glow */
+  box-shadow: 0 0 0 4px rgba(148, 0, 42, 0.35), 0 0 12px rgba(148, 0, 42, 0.35);
   animation: pulse 2s infinite;
 }
 
