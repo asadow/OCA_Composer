@@ -21,6 +21,7 @@ import UploadPage from "./EntryCodes/UploadPage";
 import MatchingEntryCodeHeader from "./EntryCodes/MatchingEntryCodeHeader";
 import MatchingJSONEntryCodeHeader from "./EntryCodes/MatchingJSONEntryCodeHeader";
 import StepperProgressIndicator from "./StepperProgressIndicator/StepperProgressIndicator";
+import ClickableStepperProgressIndicator from "./StepperProgressIndicator/ClickableStepperProgressIndicator";
 import DataStandards from "./Overlays/DataStandards";
 import Range from "./Overlays/Range";
 import AttributeFraming from "./Overlays/AttributeFraming";
@@ -108,7 +109,13 @@ const Home = ({
       <Header currentPage={currentPage} />
       <Box sx={{ flex: 1 }}>
         {currentPage !== "Start" && currentPage !== "Create" && (
-          <StepperProgressIndicator steps={steps} activeStep={activeStep} />
+          <ClickableStepperProgressIndicator
+            steps={steps}
+            activeStep={activeStep}
+            onStepClick={(index, step) => {
+              setCurrentPage(step.page);
+            }}
+          />
         )}
         {currentPage === "Start" && <StartSchema pageForward={pageForward} />}
         {currentPage === "Metadata" && (

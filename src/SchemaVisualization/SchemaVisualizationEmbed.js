@@ -177,7 +177,9 @@ const SchemaVisualizationEmbed = ({
            ...node,
            data: {
              ...node.data,
-             onNodeClick: handleNodeClick
+             onNodeClick: handleNodeClick,
+             currentSchemaId: currentSchemaId,
+             nodeId: node.id
            }
          }));
        }

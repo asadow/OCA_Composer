@@ -10,54 +10,38 @@ import { useMultiSchema } from "../context/MultiSchemaContext";
 import { CustomPalette } from "../constants/customPalette";
 import SchemaDescription from "./SchemaDescription";
 import ViewGrid from "./ViewGrid";
-import LinkCard from "./LinkCard";
+ 
 import useExportLogic from "./useExportLogic";
 import Loading from "../components/Loading";
 import useExportLogicV2 from "./useExportLogicV2";
 import useMultiSchemaExport from "../hooks/useMultiSchemaExport";
-import { CUSTOM_FORMAT_RULE } from "../constants/constants";
+ 
 import { codesToLanguages } from "../constants/isoCodes";
-import useGenerateReadMe from "./useGenerateReadMe";
-import useGenerateReadMeV2 from "./useGenerateReadMeV2";
-import {
-  getFormatRuleDescription,
-  updatedUnitFramingRowDataForViewSchema
-} from "../constants/utils";
+ 
+ 
+ 
 import ErrorPopup from "./ErrorPopup";
 import CustomRouterLink from "../components/CustomRouterLink";
 import SchemaVisualizationEmbed from "../SchemaVisualization/SchemaVisualizationEmbed";
 
 export default function ViewSchema({
-  pageBack,
+  
   isExport = true,
   addClearButton,
-  pageForward,
+  
   isPageForward = true,
-  isBack = false
+  
 }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const {
     languages,
     attributeRowData,
-    lanAttributeRowData,
     schemaDescription,
     isZip,
     isZipEdited,
-    setIsZipEdited,
-    characterEncodingRowData,
     setCurrentPage,
-    history,
-    setHistory,
-    formatRuleRowData,
-    currentUnitFramedRowData,
-    dataStandardsRowData,
-    zipToReadme,
-    jsonToReadme,
     OCAPackage,
-    rangeRowData,
-    attributeFramingRowData,
-    currentSchemaId,
     setEditingSchemaId
   } = useContext(Context);
 
@@ -67,48 +51,36 @@ export default function ViewSchema({
     switchToSchema, 
     exportSchemaChanges, 
     getModifiedSchemas,
-    getNavigationHistory,
-    navigateBack,
+    
+    
     getSchemaState,
-    isSchemaModified
+    
   } = useMultiSchema();
 
-  const languageIndex = languages.findIndex(
-    (item) => codesToLanguages?.[i18next.language] === item
-  );
-  const filteredLanguages = [...languages];
-  if (languageIndex !== -1 && languageIndex !== 0) {
-    const removedLanguage = filteredLanguages.splice(languageIndex, 1);
-    filteredLanguages.unshift(removedLanguage[0]);
-  }
+  const languageIndex = languages.findIndex((item) => codesToLanguages?.[i18next.language] === item);
+  const filteredLanguages = React.useMemo(() => {
+    const arr = [...languages];
+    if (languageIndex !== -1 && languageIndex !== 0) {
+      const removedLanguage = arr.splice(languageIndex, 1);
+      arr.unshift(removedLanguage[0]);
+    }
+    return arr;
+  }, [languages, languageIndex]);
   const [currentLanguage, setCurrentLanguage] = useState(filteredLanguages[0]);
   const [displayArray, setDisplayArray] = useState([]);
-  const [showLink, setShowLink] = useState(false);
   const { resetToDefaults, exportDisabled } = useExportLogic();
   const { exportData: originalExportData, error: exportError, clearError } = useExportLogicV2();
   const { 
     exportData: multiSchemaExportData, 
     error: multiSchemaExportError, 
     clearError: clearMultiSchemaError,
-    activeSchemaId: exportActiveSchemaId,
-    modifiedSchemas
+    
+    
   } = useMultiSchemaExport();
   const [loading, setLoading] = useState(true);
-  const [visualizationMode, setVisualizationMode] = useState("tree");
+  const [visualizationMode, setVisualizationMode] = useState("detailed");
 
-  // Get the modified OCA package for visualization
-  const getModifiedOCAPackage = () => {
-    if (!OCAPackage) return null;
-    
-    const modifiedSchemas = getModifiedSchemas();
-    if (modifiedSchemas.length > 0) {
-      // Return the modified package with schema changes
-      return exportSchemaChanges(OCAPackage);
-    }
-    
-    // Return the original package if no modifications
-    return OCAPackage;
-  };
+  // (unused helper removed)
 
   // Enhanced schema switching with proper navigation
   const handleSchemaSwitch = useCallback((schemaId) => {
@@ -126,115 +98,13 @@ export default function ViewSchema({
 
 
 
-  const { toTextFile } = useGenerateReadMe();
-  const { jsonToTextFile } = useGenerateReadMeV2();
+  // readme hooks not used on this page
   // Always show multi-schema visualization if we have an OCA package
   const hasHierarchy = !!OCAPackage;
 
 
 
-  // Formats language buttons in a way that can handle many languages cleanly
-  // Minimizes language for cases where it's too long to fit in button size
-
-  const displayLanguageArray = [];
-
-  for (let i = 0; i < filteredLanguages.length; i += 7) {
-    const languageRow = filteredLanguages.slice(i, i + 7).filter(Boolean);
-    displayLanguageArray.push(languageRow);
-  }
-
-  const createLanguageRow = (languageArray, rowIndex) => {
-    const languageRowDisplay = languageArray.map((language, index) => {
-      let curveLeftTop = "0";
-      let curveRightTop = "0";
-      let curveRightBottom = "0";
-      let curveLeftBottom = "0";
-
-      if (languages.length > 7) {
-        if (rowIndex === 0 && index === 0) {
-          curveLeftBottom = "8px";
-        }
-        if (rowIndex === displayLanguageArray.length - 1 && index === 0) {
-          curveLeftTop = "8px";
-        }
-        if (rowIndex === 0 && index === 6) {
-          curveRightBottom = "8px";
-        }
-        if (
-          rowIndex === displayLanguageArray.length - 1 &&
-          index === languageArray.length - 1
-        ) {
-          curveRightTop = "8px";
-        }
-        if (
-          rowIndex === displayLanguageArray.length - 2 &&
-          displayLanguageArray[displayLanguageArray.length - 1].length < 7 &&
-          index === 6
-        ) {
-          curveRightTop = "8px";
-        }
-      } else {
-        if (index === 0) {
-          curveLeftBottom = "8px";
-          curveLeftTop = "8px";
-        }
-        if (index === languages.length - 1) {
-          curveRightBottom = "8px";
-          curveRightTop = "8px";
-        }
-      }
-
-      const borderRadius = `${curveLeftTop} ${curveRightTop} ${curveRightBottom} ${curveLeftBottom}`;
-
-      let minimizedLanguage = language.slice(0, 9);
-      if (minimizedLanguage !== language) {
-        minimizedLanguage += "...";
-      }
-      return (
-        <Button
-          onClick={() => {
-            setCurrentLanguage(language);
-          }}
-          key={language}
-          sx={{
-            backgroundColor:
-              currentLanguage === language
-                ? CustomPalette.PRIMARY
-                : CustomPalette.SECONDARY,
-            color: "white",
-            borderRadius,
-            border: "none",
-            fontSize: "0.7rem",
-            padding: "0.3rem 0.5rem",
-            minWidth: "auto",
-            width: "100%",
-            height: "2rem",
-            "&:hover": {
-              backgroundColor:
-                currentLanguage === language
-                  ? CustomPalette.PRIMARY
-                  : CustomPalette.SECONDARY
-            }
-          }}
-        >
-          {minimizedLanguage}
-        </Button>
-      );
-    });
-
-    return (
-      <Box
-        key={rowIndex}
-        sx={{
-          display: "flex",
-          gap: "0.1rem",
-          marginBottom: "0.1rem"
-        }}
-      >
-        {languageRowDisplay}
-      </Box>
-    );
-  };
+  // Removed in favor of global language toggle (EN/FR)
 
   const handleClickDownload = async () => {
     try {
@@ -279,9 +149,12 @@ export default function ViewSchema({
               // Convert schema state back to the format expected by ViewGrid
               const schemaAttributes = schemaState.attributes || [];
               const schemaEntryCodes = schemaState.entryCodes || {};
+              const formatRuleIndex = new Map(
+                (schemaState.formatRuleData || []).map((r) => [r.Attribute, r["Format Rule"]])
+              );
               
               // Create the display array in the format expected by ViewGrid
-              const newDisplayArray = schemaAttributes.map(attr => {
+              const newDisplayArray = schemaAttributes.map((attr) => {
                 const hasEntryCodes = schemaEntryCodes[attr.Attribute];
                 
                 // Get language-specific data from schema state
@@ -293,9 +166,9 @@ export default function ViewSchema({
                 const listObj = {};
                 
                 // Initialize for all languages with proper data
-                filteredLanguages.forEach(lang => {
+                filteredLanguages.forEach((lang) => {
                   // Get language-specific data for this attribute
-                  const langData = lanAttributeData[lang]?.find(item => item.Attribute === attr.Attribute);
+                  const langData = lanAttributeData[lang]?.find((item) => item.Attribute === attr.Attribute);
                   
                   descriptionObj[lang] = langData?.Description || attr.Description || "";
                   labelObj[lang] = langData?.Label || attr.Label || "";
@@ -304,7 +177,7 @@ export default function ViewSchema({
                 
                 // Handle schema references (refs/refn) - these should be "Child Schema" not a type
                 let displayType = attr.Type || "";
-                if (displayType.startsWith('refs:') || displayType.startsWith('refn:')) {
+                if (displayType.startsWith("refs:") || displayType.startsWith("refn:")) {
                   displayType = "Child Schema";
                 }
                 
@@ -313,7 +186,8 @@ export default function ViewSchema({
                   Type: displayType,
                   Description: descriptionObj,
                   Label: labelObj,
-                  Required: attr.Required || false,
+                  Required: !!attr.Required,
+                  "Format Rule": formatRuleIndex.get(attr.Attribute) || "",
                   List: listObj,
                   Unit: attr.Unit || "",
                   Flagged: attr.Flagged || false
@@ -346,7 +220,7 @@ export default function ViewSchema({
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [activeSchemaId, OCAPackage, currentLanguage, attributeRowData, getSchemaState]);
+  }, [activeSchemaId, OCAPackage, currentLanguage, attributeRowData, getSchemaState, filteredLanguages]);
 
   if (loading) {
     return <Loading />;
@@ -356,68 +230,35 @@ export default function ViewSchema({
     <Box sx={{ padding: "2rem" }}>
 
 
-      {/* Schema Description */}
-      <Box sx={{ marginBottom: "2rem" }}>
-        <SchemaDescription
-          schemaDescription={schemaDescription}
-          currentLanguage={currentLanguage}
-          setCurrentLanguage={setCurrentLanguage}
-        />
-      </Box>
-
-      {/* Language Selection */}
-      <Box sx={{ marginBottom: "2rem" }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            marginBottom: "1rem"
-          }}
-        >
-          <Typography
-            sx={{
-              fontSize: 22,
-              fontWeight: "bold",
-              color: CustomPalette.PRIMARY
-            }}
-          >
-            {t("Schema Language")}
-          </Typography>
-          <Box sx={{ marginLeft: "1rem", color: CustomPalette.GREY_600 }}>
-            <Tooltip
-              title={t("Select the language for schema display")}
-              placement="right"
-              arrow
+      {/* Header: Schema description + actions */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+        <SchemaDescription currentLanguage={currentLanguage} />
+        <Box sx={{ display: "flex", gap: 2 }}>
+          {isPageForward && isExport && (!isZip || (isZip && isZipEdited)) && (
+            <Button
+              color="button"
+              variant="contained"
+              onClick={handleClickDownload}
+              sx={{ width: "13rem", display: "flex", justifyContent: "space-around", p: 1 }}
+              disabled={exportDisabled}
             >
-              <HelpOutlineIcon sx={{ fontSize: 15 }} />
-            </Tooltip>
-          </Box>
-        </Box>
-
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.1rem"
-          }}
-        >
-          {displayLanguageArray.map((languageArray, rowIndex) =>
-            createLanguageRow(languageArray, rowIndex)
+              {t("Finish and Download")} <CheckCircleIcon />
+            </Button>
+          )}
+          {addClearButton && (
+            <Button
+              color="warning"
+              variant="outlined"
+              onClick={resetToDefaults}
+              sx={{ width: "20rem", display: "flex", justifyContent: "space-around", p: 1 }}
+            >
+              {t("Clear All Data and Restart")}
+            </Button>
           )}
         </Box>
       </Box>
 
-      {/* Schema Grid */}
-      <Box sx={{ marginBottom: "2rem" }}>
-        <ViewGrid
-          currentLanguage={currentLanguage}
-          setCurrentLanguage={setCurrentLanguage}
-          displayArray={displayArray}
-          setDisplayArray={setDisplayArray}
-        />
-      </Box>
-
-      {/* Multi-Schema Visualization */}
+      {/* Multi-Schema Visualization (moved above details) */}
       {hasHierarchy && (
         <>
           <Box
@@ -448,7 +289,7 @@ export default function ViewSchema({
             </Box>
           </Box>
 
-          {/* Mode toggle buttons matching Schema Language style */}
+          {/* Mode toggle buttons */}
           <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
             <Button
               color="button"
@@ -494,58 +335,32 @@ export default function ViewSchema({
           </Box>
         </>
       )}
-      
-      {/* Export Button */}
-      {isPageForward && isExport && (!isZip || (isZip && isZipEdited)) ? (
-        <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-          <Box>
-            <Button
-              color="button"
-              variant="contained"
-              onClick={handleClickDownload}
-              sx={{
-                width: "13rem",
-                display: "flex",
-                justifyContent: "space-around",
-                p: 1
-              }}
-              disabled={exportDisabled}
-            >
-              {t("Finish and Download")} <CheckCircleIcon />
-            </Button>
-          </Box>
-        </Box>
-      ) : (
-        <></>
-      )}
-      
-      {/* Clear Button */}
-      {addClearButton && (
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-end",
-            marginTop: "2rem"
-          }}
-        >
-          <Button
-            color="warning"
-            variant="outlined"
-            onClick={resetToDefaults}
-            sx={{
-              alignSelf: "flex-end",
-              width: "20rem",
-              display: "flex",
-              justifyContent: "space-around",
-              p: 1,
-              mb: 5
-            }}
+
+      {/* Attribute Details header and grid */}
+      <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+        <Typography sx={{ fontSize: 22, fontWeight: "bold", color: CustomPalette.PRIMARY }}>
+          {t("Attribute Details")}
+        </Typography>
+        <Box sx={{ marginLeft: "0.5rem", color: CustomPalette.GREY_600 }}>
+          <Tooltip
+            title={t("This table shows each attribute with its labels, descriptions, required status, format rules, and units")}
+            placement="right"
+            arrow
           >
-            {t("Clear All Data and Restart")}
-          </Button>
+            <HelpOutlineIcon sx={{ fontSize: 15 }} />
+          </Tooltip>
         </Box>
-      )}
+      </Box>
+      <Box sx={{ marginBottom: "2rem" }}>
+        <ViewGrid
+          currentLanguage={currentLanguage}
+          setCurrentLanguage={setCurrentLanguage}
+          displayArray={displayArray}
+          setDisplayArray={setDisplayArray}
+        />
+      </Box>
+      
+      {/* Moved action buttons to header above */}
       
       {/* Error Popup */}
       {(exportError || multiSchemaExportError) && (
