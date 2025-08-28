@@ -42,14 +42,14 @@ export default function Grid({
   setCanDelete,
   setAddByTab,
   typesObjectRef,
-  setLoading
+  setLoading,
+  attributeRowData,
+  setAttributeRowData
 }) {
   const { t } = useTranslation();
   const {
     attributesList,
     setAttributesList,
-    attributeRowData,
-    setAttributeRowData,
     lanAttributeRowData,
     setLanAttributeRowData,
     setCharacterEncodingRowData,
@@ -139,7 +139,8 @@ export default function Grid({
           data: params.data,
           attributeRowData,
           typesObjectRef,
-          dropRefs
+          dropRefs,
+          setAttributeRowData
         }),
         width: 150
       },

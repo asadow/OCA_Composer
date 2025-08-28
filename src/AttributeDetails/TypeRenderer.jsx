@@ -4,10 +4,9 @@ import { MenuItem } from "@mui/material";
 import { DropdownMenuList } from "../components/DropdownMenuCell";
 import { Context } from "../App";
 
-const TypeRenderer = ({ data, attributeRowData, typesObjectRef, dropRefs }) => {
+const TypeRenderer = ({ data, attributeRowData, typesObjectRef, dropRefs, setAttributeRowData }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { t } = useTranslation();
-  const { setAttributeRowData } = useContext(Context);
   
   const displayValues = [
     { value: "", label: "" },

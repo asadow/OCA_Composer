@@ -11,6 +11,7 @@ import {
   replaceAttributeCharsInParsedJson
   // getUnitsFramedThatAlreadyExistInOcaPackage
 } from "../constants/utils";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 
 const useHandleAllDrop = (pageForward) => {
   const {
@@ -26,8 +27,10 @@ const useHandleAllDrop = (pageForward) => {
     setRawFile,
     excelSheetChoice,
     setExcelSheetChoice,
-    setOCAPackage
+    setOCAPackage,
+    setEditingSchemaId
   } = useContext(Context);
+  const { clearAllSchemas } = useMultiSchema();
   const { processLanguages, processMetadata, processLabelsDescriptionRootUnitsEntries } =
     useZipParser();
 
@@ -540,6 +543,9 @@ const useHandleAllDrop = (pageForward) => {
   const handleJsonDrop = useCallback((acceptedFiles) => {
     try {
       setLoading(true);
+      // Clear multi-schema context when uploading a new file
+      clearAllSchemas();
+
       const reader = new FileReader();
 
       reader.onload = async (e) => {
@@ -553,6 +559,8 @@ const useHandleAllDrop = (pageForward) => {
           //   getUnitsFramedThatAlreadyExistInOcaPackage(jsonFile)
           // );
           setOCAPackage(jsonFile);
+          // Set editing schema to root schema
+          setEditingSchemaId(jsonFile.oca_bundle.bundle.d);
           handleBundleJSONDrop(modifiedBundle, jsonFile);
         } else if (jsonFile?.bundle) {
           const modifiedJsonFile = replaceAttributeCharsInParsedJson(jsonFile.bundle);
@@ -560,8 +568,11 @@ const useHandleAllDrop = (pageForward) => {
           if (jsonFile?.dependencies && Array.isArray(jsonFile.dependencies)) {
             const sanitizedOcaPackage = { ...jsonFile, bundle: modifiedJsonFile };
             setOCAPackage(sanitizedOcaPackage);
+            // Set editing schema to root schema
+            setEditingSchemaId(jsonFile.bundle.d);
             handleBundleJSONDrop(modifiedJsonFile, sanitizedOcaPackage);
           } else {
+            setEditingSchemaId(jsonFile.bundle.d);
             handleBundleJSONDrop(modifiedJsonFile);
           }
         } else if (jsonFile?.schema?.[0]) {

@@ -19,10 +19,12 @@ export default function AddAttribute({
   setShowAddAttribute,
   addByTab,
   setAddByTab,
-  typesObjectRef
+  typesObjectRef,
+  attributeRowData,
+  setAttributeRowData
 }) {
   const { t } = useTranslation();
-  const { setAttributesList, setAttributeRowData, attributeRowData } = useContext(Context);
+  const { setAttributesList } = useContext(Context);
   const [newAttribute, setNewAttribute] = useState("");
 
   const handleLanguageField = (e) => {
@@ -32,7 +34,7 @@ export default function AddAttribute({
 
   const handleAddRow = () => {
     gridRef.current.api.stopEditing();
-    
+
     // Use context data instead of trying to get it from the grid
     const currentRowData = attributeRowData || [];
     const newAttributeRowData = JSON.parse(JSON.stringify(currentRowData));

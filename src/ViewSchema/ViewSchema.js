@@ -47,7 +47,7 @@ export default function ViewSchema({
     switchToSchema,
     exportSchemaChanges,
     getModifiedSchemas,
-
+    modifiedSchemas,
     getSchemaState
   } = useMultiSchema();
 
@@ -77,6 +77,7 @@ export default function ViewSchema({
   } = useMultiSchemaExport();
   const [loading, setLoading] = useState(true);
   const [visualizationMode, setVisualizationMode] = useState("detailed");
+  const [updatedOCAPackage, setUpdatedOCAPackage] = useState(OCAPackage);
 
   // (unused helper removed)
 
@@ -107,6 +108,20 @@ export default function ViewSchema({
   // readme hooks not used on this page
   // Always show multi-schema visualization if we have an OCA package
   const hasHierarchy = !!OCAPackage;
+
+  // Update the package data when schemas are modified
+  useEffect(() => {
+    if (OCAPackage) {
+      if (modifiedSchemas.size > 0) {
+        // Export with schema changes
+        const modifiedPackage = exportSchemaChanges(OCAPackage);
+        setUpdatedOCAPackage(modifiedPackage);
+      } else {
+        // Use original package if no changes
+        setUpdatedOCAPackage(OCAPackage);
+      }
+    }
+  }, [OCAPackage, modifiedSchemas, exportSchemaChanges]);
 
   // Removed in favor of global language toggle (EN/FR)
 
@@ -382,10 +397,11 @@ export default function ViewSchema({
 
           <Box sx={{ mb: 4, width: "100%" }}>
             <SchemaVisualizationEmbed
+              key={`viz-${updatedOCAPackage?.bundle?.d}-${modifiedSchemas.size}`}
               attributeRowData={attributeRowData}
               schemaDescription={schemaDescription}
               languages={filteredLanguages}
-              OCAPackage={OCAPackage}
+              OCAPackage={updatedOCAPackage}
               viewMode={visualizationMode}
               height="70vh"
               currentSchemaId={activeSchemaId}
