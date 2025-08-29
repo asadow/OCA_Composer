@@ -1,7 +1,8 @@
 import { Box, Button } from "@mui/material";
 import React, { useCallback, useContext, useMemo, useRef, useState } from "react";
-import { Context } from "../App";
 import { AgGridReact } from "ag-grid-react";
+import { useTranslation } from "react-i18next";
+import { Context } from "../App";
 import "ag-grid-community/styles/ag-theme-balham.css";
 import useCharacterEncodingType, {
   CharacterEncodingTypeRenderer
@@ -9,10 +10,9 @@ import useCharacterEncodingType, {
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import CellHeader from "../components/CellHeader";
 import { gridStyles, preWrapWordBreak } from "../constants/styles";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import DeleteConfirmation from "./DeleteConfirmation";
 import Loading from "../components/Loading";
-import { useTranslation } from "react-i18next";
 
 const CharacterEncoding = () => {
   const { t } = useTranslation();
@@ -28,8 +28,7 @@ const CharacterEncoding = () => {
   const gridRef = useRef();
   const { handleSave, applyAllFunc } = useCharacterEncodingType(gridRef);
 
-  const columnDefs = useMemo(() => {
-    return [
+  const columnDefs = useMemo(() => [
       {
         field: "Attribute",
         editable: false,
@@ -57,8 +56,7 @@ const CharacterEncoding = () => {
         }),
         width: 200
       }
-    ];
-  }, [t]);
+    ], [t]);
 
   const handleForward = useCallback(() => {
     handleSave();
@@ -137,7 +135,7 @@ const CharacterEncoding = () => {
               alignItems: "flex-start"
             }}
           >
-            <Box sx={{ height: "2.2rem" }} key={0}></Box>
+            <Box sx={{ height: "2.2rem" }} key={0} />
             <Button
               color="navButton"
               sx={{

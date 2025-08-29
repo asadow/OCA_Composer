@@ -29,10 +29,10 @@ export default function ClickableStepperProgressIndicator({ activeStep, steps, o
                   boxShadow: "none",
                   fontSize: "0.875rem",
                   transition: "background-color 0.15s ease, transform 0.1s ease",
-                  '&:hover': {
+                  "&:hover": {
                     backgroundColor: CustomPalette.SECONDARY,
-                    color: 'white',
-                    transform: 'translateY(-1px)'
+                    color: "white",
+                    transform: "translateY(-1px)"
                   }
                 }}
               >

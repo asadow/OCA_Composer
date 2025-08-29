@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext, useCallback, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { AgGridReact } from "ag-grid-react";
-import { Box, MenuItem } from "@mui/material";
+import { Box, Tooltip } from "@mui/material";
 import { Context } from "../App";
 import { greyCellStyle } from "../constants/styles";
 import "ag-grid-community/styles/ag-grid.css";
@@ -9,7 +9,6 @@ import "ag-grid-community/styles/ag-theme-balham.css";
 import getListOfSelectedOverlays from "../constants/getListOfSelectedOverlays";
 import CellHeader from "../components/CellHeader";
 import TypeTooltip from "../AttributeDetails/TypeTooltip";
-import { DropdownMenuList } from "../components/DropdownMenuCell";
 import {
   ADC,
   FIELD_RANGE_OVERLAY,
@@ -66,38 +65,25 @@ const CheckboxRenderer = ({ value }) => {
 };
 
 export const ListRenderer = memo((props) => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const listText = props?.data?.List;
+  if (!listText || listText === "Not a List") {
+    return <Box>Not a List</Box>;
+  }
 
-  const handleChange = () => {
-    setIsDropdownOpen(false);
-  };
-
-  const handleClick = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const typesDisplay = props.data?.List?.split(" | ").map((value) => (
-    <MenuItem
-      key={value}
-      value={value}
-      sx={{ border: "none", height: "2rem", fontSize: "small" }}
-    >
-      {value}
-    </MenuItem>
-  ));
-
-  return props.data?.List === "Not a List" ? (
-    <Box>Not a List </Box>
-  ) : (
-    <DropdownMenuList
-      handleKeyDown={() => {}}
-      type={props.node.data.List.substring(0, 18)}
-      handleChange={handleChange}
-      handleClick={handleClick}
-      isDropdownOpen={isDropdownOpen}
-      setIsDropdownOpen={setIsDropdownOpen}
-      typesDisplay={typesDisplay}
-    />
+  // Render plain text with single-line ellipsis and a tooltip for full content
+  return (
+    <Tooltip title={listText} placement="top" arrow>
+      <Box
+        sx={{
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          width: "100%"
+        }}
+      >
+        {listText}
+      </Box>
+    </Tooltip>
   );
 });
 
@@ -215,7 +201,8 @@ export default function ViewGrid({
         {
           field: "List",
           headerName: t("List"),
-          width: 173,
+          flex: 2,
+          minWidth: 320,
           autoHeight: true,
           headerComponent: CellHeader,
           headerComponentParams: {
@@ -285,7 +272,7 @@ export default function ViewGrid({
                 <strong>{key}:</strong> &quot;{value}&quot;
               </React.Fragment>
             ));
-            helpText = <>{helpTextElements}</>;
+            helpText = helpTextElements;
           }
 
           predefinedColumns.push({

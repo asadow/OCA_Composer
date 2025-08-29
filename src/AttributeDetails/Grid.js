@@ -166,6 +166,7 @@ export default function Grid({
           data: params.data,
           gridRef,
           typesObjectRef,
+          currentRows: attributeRowData,
           setAttributesList,
           setAttributeRowData,
           canDelete,

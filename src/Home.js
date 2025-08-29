@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useContext } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import "./App.css";
 import { Box } from "@mui/material";
 import StartSchema from "./StartSchema/StartSchema";
@@ -9,22 +9,9 @@ import LanguageDetails from "./LanguageDetails/LanguageDetails";
 import ViewSchema from "./ViewSchema/ViewSchema";
 import CreateManually from "./CreateManually/CreateManually";
 import Overlays from "./Overlays/Overlays";
-import CharacterEncoding from "./Overlays/CharacterEncoding";
-import RequiredEntries from "./Overlays/RequiredEntries";
-import { pagesArray, Context } from "./App";
-import Cardinality from "./Overlays/Cardinality";
-import UnitFraming from "./Overlays/UnitFraming";
-import FormatRulesV2 from "./Overlays/FormatRuleV2";
+import { Context } from "./App";
 import Header from "./Header/Header";
 import Footer from "./Footer/Footer";
-import UploadPage from "./EntryCodes/UploadPage";
-import MatchingEntryCodeHeader from "./EntryCodes/MatchingEntryCodeHeader";
-import MatchingJSONEntryCodeHeader from "./EntryCodes/MatchingJSONEntryCodeHeader";
-import StepperProgressIndicator from "./StepperProgressIndicator/StepperProgressIndicator";
-import ClickableStepperProgressIndicator from "./StepperProgressIndicator/ClickableStepperProgressIndicator";
-import DataStandards from "./Overlays/DataStandards";
-import Range from "./Overlays/Range";
-import AttributeFraming from "./Overlays/AttributeFraming";
 import { useMultiSchema } from "./context/MultiSchemaContext";
 
 
@@ -37,8 +24,8 @@ const Home = ({
   setShowIntroCard
 }) => {
   // Get context to check if we're editing a specific schema
-  const { editingSchemaId, OCAPackage } = useContext(Context);
-  const { activeSchemaId, setCurrentPackageId, loadFromLocalStorage } = useMultiSchema();
+  const { editingSchemaId, OCAPackage, setEditingSchemaId, overlay, setOverlay } = useContext(Context);
+  const { setCurrentPackageId, loadFromLocalStorage, switchToSchema } = useMultiSchema();
 
   // Register current package fingerprint for persistence namespace
   useEffect(() => {
@@ -56,9 +43,66 @@ const Home = ({
       loadFromLocalStorage(id);
     }
   }, [OCAPackage, setCurrentPackageId, loadFromLocalStorage]);
+
+  // Ensure schema is initialized when entering via EDIT SCHEMA (old flow)
+  useEffect(() => {
+    if (OCAPackage && !editingSchemaId) {
+      const rootSchemaId = OCAPackage.bundle?.d;
+      if (rootSchemaId) {
+        switchToSchema(rootSchemaId, OCAPackage);
+        setEditingSchemaId(rootSchemaId);
+      }
+    }
+  }, [OCAPackage, editingSchemaId, switchToSchema, setEditingSchemaId]);
+
+  // Normalize and load overlay data from OCAPackage so LanguageDetails has labels/lists
+  useEffect(() => {
+    if (!OCAPackage?.bundle?.overlays) return;
+    const pkgOverlays = OCAPackage.bundle.overlays;
+    const newOverlay = { ...overlay };
+
+    // Labels: array to { lang3: { attr: label } }
+    if (Array.isArray(pkgOverlays.label)) {
+      const labelOverlays = {};
+      pkgOverlays.label.forEach((labelOverlay) => {
+        const lang = labelOverlay?.language;
+        if (lang) {
+          labelOverlays[lang] = labelOverlay.attribute_labels || {};
+        }
+      });
+      newOverlay.label = labelOverlays;
+    }
+
+    // Entry overlays: array to { lang3: { attr: { code: text } } }
+    if (Array.isArray(pkgOverlays.entry)) {
+      const entryOverlays = {};
+      pkgOverlays.entry.forEach((entryOverlay) => {
+        const lang = entryOverlay?.language;
+        if (lang) {
+          entryOverlays[lang] = entryOverlay.attribute_entries || {};
+        }
+      });
+      newOverlay.entry = entryOverlays;
+    }
+
+    // Entry codes: object kept as-is
+    if (pkgOverlays.entry_code) {
+      newOverlay.entry_code = pkgOverlays.entry_code;
+    }
+
+    // Pass through other overlays if present
+    if (pkgOverlays.unit) newOverlay.unit = pkgOverlays.unit;
+    if (pkgOverlays.cardinality) newOverlay.cardinality = pkgOverlays.cardinality;
+    if (pkgOverlays.format) newOverlay.format = pkgOverlays.format;
+    if (pkgOverlays.character_encoding)
+      newOverlay.character_encoding = pkgOverlays.character_encoding;
+    if (pkgOverlays.conformance) newOverlay.conformance = pkgOverlays.conformance;
+
+    setOverlay(newOverlay);
+  }, [OCAPackage, overlay, setOverlay]);
   
   // Determine if we should use schema-aware components
-  const isEditingSpecificSchema = editingSchemaId || activeSchemaId;
+
   const [activeStep, setActiveStep] = useState(0);
   const [steps, setSteps] = useState([
     { label: "Schema Metadata", page: "Metadata" },
@@ -75,26 +119,57 @@ const Home = ({
    * @returns
    */
   const insertStep = (position, step) => {
-    // No need to insert the step if it already exists
-    const stepToInsert = steps.find((s) => s.label === step.label);
-
-    if (stepToInsert) return;
-
-    setSteps((currentSteps) => [
-      ...currentSteps.slice(0, position),
-      step,
-      ...currentSteps.slice(position)
-    ]);
+    setSteps((currentSteps) => {
+      // Prevent duplicates even if called multiple times rapidly
+      const exists = currentSteps.some((s) => s.label === step.label);
+      if (exists) return currentSteps;
+      return [
+        ...currentSteps.slice(0, position),
+        step,
+        ...currentSteps.slice(position)
+      ];
+    });
   };
 
   const removeStep = (stepLabel) => {
     setSteps((currentSteps) => currentSteps.filter((step) => step.label !== stepLabel));
   };
 
+  // Show Entry Codes step immediately if schema contains list attributes or entry overlays
+  useEffect(() => {
+    if (!OCAPackage) return;
+
+    const hasArrayAttributes = (() => {
+      const attrs = OCAPackage?.bundle?.capture_base?.attributes || {};
+      return Object.values(attrs).some((v) => Array.isArray(v));
+    })();
+
+    const hasEntryOverlay = (() => {
+      const entry = OCAPackage?.bundle?.overlays?.entry;
+      if (Array.isArray(entry)) {
+        return entry.some((e) => {
+          const ae = e?.attribute_entries || {};
+          return Object.keys(ae).length > 0;
+        });
+      }
+      return false;
+    })();
+
+    const hasEntryCodeOverlay = (() => {
+      const ec = OCAPackage?.bundle?.overlays?.entry_code?.attribute_entry_codes;
+      if (ec && typeof ec === "object") {
+        return Object.keys(ec).length > 0;
+      }
+      return false;
+    })();
+
+    if (hasArrayAttributes || hasEntryOverlay || hasEntryCodeOverlay) {
+      insertStep(2, { label: "Entry Codes", page: "Codes" });
+    }
+  }, [OCAPackage]);
+
   // Add new page to this list
-  const allowedPages = useMemo(() => {
-    return steps.map((step) => step.page);
-  }, [steps]);
+
 
   // Update active step based on current page
   useEffect(() => {
@@ -108,14 +183,9 @@ const Home = ({
     <>
       <Header currentPage={currentPage} />
       <Box sx={{ flex: 1 }}>
+        {/* debug logs removed to prevent noisy renders */}
         {currentPage !== "Start" && currentPage !== "Create" && (
-          <ClickableStepperProgressIndicator
-            steps={steps}
-            activeStep={activeStep}
-            onStepClick={(index, step) => {
-              setCurrentPage(step.page);
-            }}
-          />
+          <div />
         )}
         {currentPage === "Start" && <StartSchema pageForward={pageForward} />}
         {currentPage === "Metadata" && (

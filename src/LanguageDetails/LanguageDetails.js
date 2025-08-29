@@ -1,25 +1,35 @@
-import React, { useRef, useContext, useState, useEffect } from "react";
+import React, { useRef, useContext, useState, useEffect, useCallback } from "react";
 import { Box, Button, Tooltip, Typography } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { useTranslation } from "react-i18next";
 import i18next from "i18next";
 import { Context } from "../App";
 import LanGrid from "./LanGrid";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import { removeSpacesFromArrayOfObjects } from "../constants/removeSpaces";
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import Loading from "../components/Loading";
 import { codesToLanguages } from "../constants/isoCodes";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 
 export default function LanguageDetails({ pageBack, pageForward }) {
   const { t } = useTranslation();
+  // Multi-schema context
+  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  
+  // Global context
   const {
     languages,
-    lanAttributeRowData,
+    lanAttributeRowData: globalLanAttributeRowData,
     setLanAttributeRowData,
-    attributesWithLists,
+    attributesWithLists: globalAttributesWithLists,
     setCurrentPage
   } = useContext(Context);
+
+  // Use MultiSchemaContext data if editing a specific schema, otherwise use global context
+  const currentSchemaState = getSchemaState(activeSchemaId);
+  const lanAttributeRowData = activeSchemaId && currentSchemaState ? currentSchemaState.lanAttributeRowData || {} : globalLanAttributeRowData;
+  const attributesWithLists = activeSchemaId && currentSchemaState ? currentSchemaState.attributesWithLists || [] : globalAttributesWithLists;
 
   const languageIndex = languages.findIndex(
     (item) => codesToLanguages?.[i18next.language] === item
@@ -31,6 +41,9 @@ export default function LanguageDetails({ pageBack, pageForward }) {
   }
   const [currentLanguage, setCurrentLanguage] = useState(filteredLanguages[0]);
   const [loading, setLoading] = useState(true);
+  const setLoadingIfChanged = useCallback((next) => {
+    setLoading((prev) => (prev === next ? prev : next));
+  }, []);
   const gridRef = useRef();
   const refContainer = useRef();
   const entryCodesRef = useRef();
@@ -60,18 +73,30 @@ export default function LanguageDetails({ pageBack, pageForward }) {
     const newLanAttributeRowData = JSON.parse(JSON.stringify(lanAttributeRowData));
     const noSpacesObject = {};
     languages.forEach((language) => {
-      noSpacesObject[language] = removeSpacesFromArrayOfObjects(
-        newLanAttributeRowData[language]
-      );
+      // Check if lanAttributeRowData exists for this language
+      if (newLanAttributeRowData[language] && Array.isArray(newLanAttributeRowData[language])) {
+        noSpacesObject[language] = removeSpacesFromArrayOfObjects(
+          newLanAttributeRowData[language]
+        );
+      } else {
+        noSpacesObject[language] = [];
+      }
     });
-    setLanAttributeRowData(noSpacesObject);
-    if (attributesWithLists.length > 0) {
-      entryCodesRef.current = true;
+    
+    // Save to MultiSchemaContext if editing a specific schema
+    if (activeSchemaId) {
+      updateSchemaState(activeSchemaId, {
+        lanAttributeRowData: noSpacesObject
+      });
     }
+    
+    // Also save to global context for compatibility
+    setLanAttributeRowData(noSpacesObject);
+    entryCodesRef.current = attributesWithLists.length > 0;
   };
   const handlePageBack = () => {
     handleSave();
-    if (entryCodesRef.current) {
+    if (entryCodesRef.current && attributesWithLists.length > 0) {
       setCurrentPage("Codes");
     } else {
       pageBack();
@@ -241,7 +266,7 @@ export default function LanguageDetails({ pageBack, pageForward }) {
           <LanGrid
             gridRef={gridRef}
             currentLanguage={currentLanguage}
-            setLoading={setLoading}
+            setLoading={setLoadingIfChanged}
           />
         </div>
       </Box>

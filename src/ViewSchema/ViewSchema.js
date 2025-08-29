@@ -7,7 +7,7 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { Context } from "../App";
 import { useMultiSchema } from "../context/MultiSchemaContext";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import SchemaDescription from "./SchemaDescription";
 import ViewGrid from "./ViewGrid";
 
@@ -89,9 +89,9 @@ export default function ViewSchema({
         switchToSchema(schemaId, OCAPackage);
         // Set the schema being edited
         setEditingSchemaId(schemaId);
-        // Navigate to the editor step 1 (Metadata) to edit the selected schema
-        // Use original components (not schema-aware) for consistent UI
-        setCurrentPage("Metadata");
+        // Navigate to the editor step 2 (Details) to edit the selected schema
+        // This will trigger the AttributeDetails component which will add the Entry Codes step if needed
+        setCurrentPage("Details");
         navigate("/start");
       }
     },
@@ -141,7 +141,7 @@ export default function ViewSchema({
         await originalExportData();
       }
     } catch (error) {
-      console.error("Export failed:", error);
+      // console.error("Export failed:", error);
     } finally {
       setLoading(false);
     }
@@ -262,7 +262,7 @@ export default function ViewSchema({
 
         setLoading(false);
       } catch (error) {
-        console.error("Error loading schema data:", error);
+        // console.error("Error loading schema data:", error);
         setLoading(false);
       }
     };
@@ -420,9 +420,7 @@ export default function ViewSchema({
         </Typography>
         <Box sx={{ marginLeft: "0.5rem", color: CustomPalette.GREY_600 }}>
           <Tooltip
-            title={t(
-              "This table shows each attribute with its labels, descriptions, required status, format rules, and units"
-            )}
+            title="This table shows each attribute with its labels, descriptions, required status, format rules, and units"
             placement="right"
             arrow
           >

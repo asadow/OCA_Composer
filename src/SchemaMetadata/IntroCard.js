@@ -2,8 +2,8 @@ import React from "react";
 import { Box, Button, ListItem, Typography, List } from "@mui/material";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import CloseIcon from "@mui/icons-material/Close";
-import { CustomPalette } from "../constants/customPalette";
 import { useTranslation } from "react-i18next";
+import { CustomPalette } from "../constants/customPalette";
 
 export default function IntroCard({ setShowIntroCard }) {
   const { t } = useTranslation();
@@ -62,10 +62,10 @@ export default function IntroCard({ setShowIntroCard }) {
           />
         </Box>
         <Typography variant="h5" sx={{ p: 1 }}>
-          {t('This program lets you create OCA schema templates')}
+          {t("This program lets you create OCA schema templates")}
         </Typography>
         <Typography variant="h6" sx={{ p: 1 }}>
-          <strong>{t('A well formed template MUST include')}</strong>
+          <strong>{t("A well formed template MUST include")}</strong>
         </Typography>
         <List
           sx={{
@@ -78,10 +78,10 @@ export default function IntroCard({ setShowIntroCard }) {
           }}
         >
           <ListItem variant="body1" sx={{ p: 1, fontSize: 18 }}>
-            {t('a complete')} <strong>{t('schema description')}</strong> {t('in at least one language')}
+            {t("a complete")} <strong>{t("schema description")}</strong> {t("in at least one language")}
           </ListItem>
           <ListItem variant="body1" sx={{ p: 1, fontSize: 18 }}>
-            <strong>{t('data types')}</strong> {t('for every attribute')}
+            <strong>{t("data types")}</strong> {t("for every attribute")}
           </ListItem>
         </List>
         <Button

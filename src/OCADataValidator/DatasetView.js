@@ -1,12 +1,12 @@
-import React, { forwardRef, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import BackNextSkeleton from '../components/BackNextSkeleton';
-import { Box, IconButton, Typography } from '@mui/material';
-import { Context } from '../App';
-import { AgGridReact } from 'ag-grid-react';
-import { greyCellStyle, gridStyles } from '../constants/styles';
-import { CustomPalette } from '../constants/customPalette';
-import { useTranslation } from 'react-i18next';
+import React, { forwardRef, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Box, IconButton, Typography } from "@mui/material";
+import { AgGridReact } from "ag-grid-react";
+import { useTranslation } from "react-i18next";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import BackNextSkeleton from "../components/BackNextSkeleton";
+import { Context } from "../App";
+import { greyCellStyle, gridStyles } from "../constants/styles";
+import { CustomPalette } from "../constants/customPalette";
 
 export const TrashCanButton = memo(
   forwardRef((props, ref) => {
@@ -44,12 +44,10 @@ const DatasetView = () => {
   const [schemaColumnDefs, setSchemaColumnDefs] = useState([]);
   const [schemaTableLength, setSchemaTableLength] = useState(0);
 
-  const defaultColDef = useMemo(() => {
-    return {
+  const defaultColDef = useMemo(() => ({
       editable: true,
       cellDataType: false,
-    };
-  }, []);
+    }), []);
 
   useEffect(() => {
     const schemaTitles = [];
@@ -70,8 +68,8 @@ const DatasetView = () => {
 
     schemaTitles.push(
       {
-        headerName: '',
-        field: 'Delete',
+        headerName: "",
+        field: "Delete",
         cellRendererFramework: TrashCanButton,
         width: 50,
         cellRendererParams: (params) => ({
@@ -82,7 +80,7 @@ const DatasetView = () => {
             schemaGridRef.current.api.redrawRows();
           }
         }),
-        pinned: 'right',
+        pinned: "right",
         cellStyle: () => greyCellStyle,
       }
     );
@@ -96,17 +94,17 @@ const DatasetView = () => {
       <BackNextSkeleton
         isBack
         pageBack={() => {
-          setCurrentDataValidatorPage('StartDataValidator');
+          setCurrentDataValidatorPage("StartDataValidator");
         }}
         isForward
         pageForward={() => {
           const result = [];
-          schemaGridRef.current?.api.forEachNode(node => {
+          schemaGridRef.current?.api.forEachNode((node) => {
             const existingKeys = Object.keys(node?.data);
             const newData = { ...node?.data };
-            schemaDataConformantHeader.forEach(header => {
+            schemaDataConformantHeader.forEach((header) => {
               if (!existingKeys.includes(header)) {
-                newData[header] = '';
+                newData[header] = "";
               }
             });
             result.push(newData);
@@ -114,32 +112,32 @@ const DatasetView = () => {
 
           setSchemaDataConformantRowData(result);
           if (jsonRawFile.length > 0) {
-            setCurrentDataValidatorPage('AttributeMatchDataValidator');
+            setCurrentDataValidatorPage("AttributeMatchDataValidator");
           } else {
-            setCurrentDataValidatorPage('StartDataValidator');
+            setCurrentDataValidatorPage("StartDataValidator");
           }
         }}
       />
       <Box sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
         flex: 1,
       }}>
-        <Typography variant="h5" sx={{ mb: 2, color: CustomPalette.PRIMARY, fontWeight: 500 }}>{t('Schema Data')}</Typography>
+        <Typography variant="h5" sx={{ mb: 2, color: CustomPalette.PRIMARY, fontWeight: 500 }}>{t("Schema Data")}</Typography>
         {schemaDataConformantHeader && schemaDataConformantHeader?.length > 0 ?
-          <div className="ag-theme-balham" style={{ width: schemaTableLength, maxWidth: '90%', height: "45vh" }}>
+          <div className="ag-theme-balham" style={{ width: schemaTableLength, maxWidth: "90%", height: "45vh" }}>
             <style>{gridStyles}</style>
             <AgGridReact
               ref={schemaGridRef}
               rowData={schemaDataConformantRowData}
               columnDefs={schemaColumnDefs}
               defaultColDef={defaultColDef}
-              suppressFieldDotNotation={true}
+              suppressFieldDotNotation
             />
           </div>
-          : <Typography>{t('No Schema Conformant Data')}</Typography>}
+          : <Typography>{t("No Schema Conformant Data")}</Typography>}
       </Box>
     </>
   );

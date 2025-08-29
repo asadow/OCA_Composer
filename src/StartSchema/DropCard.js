@@ -7,13 +7,13 @@ import {
   Tooltip,
   Box
 } from "@mui/material";
-import { CustomPalette } from "../constants/customPalette";
 import DownloadIcon from "@mui/icons-material/Download";
 import LoopIcon from "@mui/icons-material/Loop";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import { defaultNoteDescription, defaultTooltip, defaultUploadedDescription } from "../constants/constants";
 import { useTranslation } from "react-i18next";
+import { defaultNoteDescription, defaultTooltip, defaultUploadedDescription } from "../constants/constants";
+import { CustomPalette } from "../constants/customPalette";
 
 export default function DropCard({
   loading,
@@ -50,7 +50,7 @@ export default function DropCard({
             }}
           >
             <Tooltip
-              title={<div style={{ whiteSpace: 'pre-line' }}>{t(tipDescription)}</div>}
+              title={<div style={{ whiteSpace: "pre-line" }}>{t(tipDescription)}</div>}
               arrow
               placement="right"
             >

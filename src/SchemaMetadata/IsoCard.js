@@ -28,12 +28,12 @@ export default function IsoCard({
     .toLowerCase();
 
   while (defaultCode.length < 2) {
-    defaultCode = defaultCode + "a";
+    defaultCode += "a";
   }
 
   const handleSave = () => {
     let newIsos = JSON.parse(JSON.stringify(customIsos));
-    let newText = removeSpacesFromString(iso);
+    const newText = removeSpacesFromString(iso);
     const invalidCharactersRegex = /[^a-zA-Z]/;
 
     if (newText.length > 1 && newText.length < 11) {
@@ -168,7 +168,7 @@ export default function IsoCard({
             }}
           >
             <Input
-              id={language + "_ISO"}
+              id={`${language  }_ISO`}
               type="text"
               onChange={handleIsoField}
               inputProps={{ style: { textAlign: "center" } }}

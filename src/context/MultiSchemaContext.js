@@ -69,6 +69,9 @@ export const MultiSchemaProvider = ({ children }) => {
   const [schemaNavigationHistory, setSchemaNavigationHistory] = useState([]);
   const [modifiedSchemas, setModifiedSchemas] = useState(new Set());
   const [currentPackageId, setCurrentPackageId] = useState(null);
+  
+  // Step management callback
+
 
   // Refs for persistence
   const saveTimerRef = useRef(null);
@@ -575,7 +578,7 @@ export const MultiSchemaProvider = ({ children }) => {
         }
       });
     } catch (error) {
-      console.warn("Failed to clear localStorage:", error);
+      // console.warn("Failed to clear localStorage:", error);
     }
   }, [currentPackageId]);
 
@@ -617,7 +620,7 @@ export const MultiSchemaProvider = ({ children }) => {
       );
       lastSavedState.current = JSON.parse(JSON.stringify(stateToSave));
     } catch (error) {
-      console.warn("Failed to save multi-schema state to localStorage:", error);
+      // console.warn("Failed to save multi-schema state to localStorage:", error);
     }
   }, [currentPackageId, schemaStates, modifiedSchemas, schemaNavigationHistory]);
 
@@ -638,7 +641,7 @@ export const MultiSchemaProvider = ({ children }) => {
 
       return true;
     } catch (error) {
-      console.warn("Failed to load multi-schema state from localStorage:", error);
+      // console.warn("Failed to load multi-schema state from localStorage:", error);
       return false;
     }
   }, []);

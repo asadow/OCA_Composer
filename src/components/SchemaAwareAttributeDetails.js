@@ -10,7 +10,7 @@ import Loading from "./Loading";
 import ErrorPopup from "../ViewSchema/ErrorPopup";
 import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 import { codesToLanguages } from "../constants/isoCodes";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 
 /**
  * Schema-Aware Attribute Details Component
@@ -113,7 +113,7 @@ export default function SchemaAwareAttributeDetails({
 
     updateSchemaState(activeSchemaId, {
       attributes: updatedAttributes,
-      attributesList: updatedAttributes.map(attr => attr.Attribute)
+      attributesList: updatedAttributes.map((attr) => attr.Attribute)
     });
 
     // Update canDelete
@@ -151,27 +151,27 @@ export default function SchemaAwareAttributeDetails({
 
     // Update attributes list
     const updatedAttributes = attributes.filter(
-      attr => !deletedAttributes.includes(attr.Attribute)
+      (attr) => !deletedAttributes.includes(attr.Attribute)
     );
 
     // Update entry codes
     const updatedEntryCodes = { ...entryCodes };
-    deletedAttributes.forEach(attrName => {
+    deletedAttributes.forEach((attrName) => {
       delete updatedEntryCodes[attrName];
     });
 
     // Update language data
     const updatedLanguageData = { ...lanAttributeRowData };
-    Object.keys(updatedLanguageData).forEach(lang => {
+    Object.keys(updatedLanguageData).forEach((lang) => {
       updatedLanguageData[lang] = updatedLanguageData[lang].filter(
-        item => !deletedAttributes.includes(item.Attribute)
+        (item) => !deletedAttributes.includes(item.Attribute)
       );
     });
 
     // Update schema state
     updateSchemaState(activeSchemaId, {
       attributes: updatedAttributes,
-      attributesList: updatedAttributes.map(attr => attr.Attribute),
+      attributesList: updatedAttributes.map((attr) => attr.Attribute),
       entryCodes: updatedEntryCodes,
       attributesWithLists: Object.keys(updatedEntryCodes),
       lanAttributeRowData: updatedLanguageData
@@ -194,7 +194,7 @@ export default function SchemaAwareAttributeDetails({
     }
 
     // Validate attribute names
-    const invalidAttributes = attributes.filter(attr => 
+    const invalidAttributes = attributes.filter((attr) => 
       !attr.Attribute || attr.Attribute.trim() === ""
     );
     
@@ -204,7 +204,7 @@ export default function SchemaAwareAttributeDetails({
     }
 
     // Check for duplicate attribute names
-    const attributeNames = attributes.map(attr => attr.Attribute);
+    const attributeNames = attributes.map((attr) => attr.Attribute);
     const uniqueNames = new Set(attributeNames);
     if (uniqueNames.size !== attributeNames.length) {
       setErrorMessage(t("Attribute names must be unique"));

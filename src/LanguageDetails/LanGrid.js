@@ -9,11 +9,13 @@ import React, {
 import { useTranslation } from "react-i18next";
 import { AgGridReact } from "ag-grid-react";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import CellHeader from "../components/CellHeader";
 import { greyCellStyle, gridStyles, preWrapWordBreak } from "../constants/styles";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-balham.css";
 import { MAX_ATTR_DESCRIPTION_CHARS, MAX_ATTR_LABEL_CHARS } from "../constants/constants";
+import { languageNameToAlpha3Codes } from "../constants/isoCodes";
 
 const textareaStyle = {
   width: "98%",
@@ -60,40 +62,56 @@ const TextareaCellEditor = forwardRef((props, ref) => {
 
 export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
   const { t } = useTranslation();
+  
+  // Multi-schema context
+  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  
+  // Global context
   const {
-    attributesList,
-    lanAttributeRowData,
+    attributesList: globalAttributesList,
+    lanAttributeRowData: globalLanAttributeRowData,
     setLanAttributeRowData,
-    attributeRowData,
-    savedEntryCodes,
-    attributesWithLists,
-    languages
+    attributeRowData: globalAttributeRowData,
+    savedEntryCodes: globalSavedEntryCodes,
+    attributesWithLists: globalAttributesWithLists,
+    languages,
+    overlay
   } = useContext(Context);
+
+  // Use MultiSchemaContext data if editing a specific schema, otherwise use global context
+  const currentSchemaState = getSchemaState(activeSchemaId);
+  const attributesList = activeSchemaId && currentSchemaState ? currentSchemaState.attributesList || [] : globalAttributesList;
+  const lanAttributeRowData = activeSchemaId && currentSchemaState ? currentSchemaState.lanAttributeRowData || {} : globalLanAttributeRowData;
+  const attributeRowData = activeSchemaId && currentSchemaState ? currentSchemaState.attributes || [] : globalAttributeRowData;
+  const savedEntryCodes = activeSchemaId && currentSchemaState ? currentSchemaState.entryCodes || {} : globalSavedEntryCodes;
+  const attributesWithLists = activeSchemaId && currentSchemaState ? currentSchemaState.attributesWithLists || [] : globalAttributesWithLists;
+  
+
 
   // Sets Language Dependent Attribute row data
   useEffect(() => {
     const newLanAttributeRowData = JSON.parse(JSON.stringify(lanAttributeRowData));
     languages.forEach((language) => {
+      const overlayLang = languageNameToAlpha3Codes[`${language}`.toLowerCase()] || language;
       if (!newLanAttributeRowData[language]) {
         const newLanguageList = [];
         attributesList.forEach((item) => {
-          const attrObj = attributeRowData.find((obj) => obj.Attribute === item) || {};
-          let listDisplay = attrObj.List;
-          if (!listDisplay) {
-            listDisplay = "Not a List";
-          } else {
-            const listDisplayArray = [];
-            if (savedEntryCodes[item]) {
-              savedEntryCodes[item].forEach((i) => {
-                listDisplayArray.push(i[language]);
-              });
-            }
-            const listDisplayString = listDisplayArray.join(" | ");
-            listDisplay = listDisplayString;
+          // Use overlay codes + labels to build display deterministically
+          const codes = overlay?.entry_code?.attribute_entry_codes?.[item] || [];
+          const labelsMap = overlay?.entry?.[overlayLang]?.[item] || {};
+          const listDisplayArray = codes
+            .map((code) => labelsMap[code])
+            .filter((txt) => txt && txt.trim() !== "");
+          const listDisplayString = listDisplayArray.join(" | ");
+          let listDisplay = listDisplayString || "Not a List";
+          if (listDisplayArray.length > 3) {
+            const shown = listDisplayArray.slice(0, 3).join(" | ");
+            const remaining = listDisplayArray.length - 3;
+            listDisplay = `${shown} +${remaining} more`;
           }
           newLanguageList.push({
             Attribute: item,
-            Label: "",
+            Label: (overlay?.label?.[overlayLang]?.[item]) || "",
             Description: "",
             List: listDisplay
           });
@@ -102,39 +120,30 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
       } else {
         const newLanguageList = [];
         attributeRowData.forEach((item) => {
-          let newLabel = "";
-          let newDescription = "";
-          if (
-            newLanAttributeRowData[language].find((i) => i.Attribute === item.Attribute)
-          ) {
-            newLabel = newLanAttributeRowData[language].find(
-              (i) => i.Attribute === item.Attribute
-            ).Label;
-          }
-          if (
-            newLanAttributeRowData[language].find((i) => i.Attribute === item.Attribute)
-          ) {
-            newDescription = newLanAttributeRowData[language].find(
-              (i) => i.Attribute === item.Attribute
-            ).Description;
-          }
-          let listDisplay = item.List;
-          if (!listDisplay) {
-            listDisplay = "Not a List";
-          } else {
-            const listDisplayArray = [];
-            if (savedEntryCodes[item.Attribute]) {
-              savedEntryCodes[item.Attribute].forEach((i) => {
-                listDisplayArray.push(i[language]);
-              });
-            }
-            const listDisplayString = listDisplayArray.join(" | ");
-            listDisplay = listDisplayString;
+          // Find existing data for this attribute in this language
+          const existingData = newLanAttributeRowData[language].find(
+            (i) => i.Attribute === item.Attribute
+          );
+          
+          const newLabel = existingData ? existingData.Label : "";
+          const newDescription = existingData ? existingData.Description : "";
+          
+          const codes = overlay?.entry_code?.attribute_entry_codes?.[item.Attribute] || [];
+          const labelsMap = overlay?.entry?.[overlayLang]?.[item.Attribute] || {};
+          const listDisplayArray = codes
+            .map((code) => labelsMap[code])
+            .filter((txt) => txt && txt.trim() !== "");
+          const listDisplayString = listDisplayArray.join(" | ");
+          let listDisplay = listDisplayString || "Not a List";
+          if (listDisplayArray.length > 3) {
+            const shown = listDisplayArray.slice(0, 3).join(" | ");
+            const remaining = listDisplayArray.length - 3;
+            listDisplay = `${shown} +${remaining} more`;
           }
 
           const newObj = {
             Attribute: item.Attribute,
-            Label: newLabel,
+            Label: newLabel || (overlay?.label?.[overlayLang]?.[item.Attribute]) || "",
             Description: newDescription,
             List: listDisplay
           };
@@ -143,12 +152,39 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
         newLanAttributeRowData[language] = newLanguageList;
       }
     });
+    
+    // Save to MultiSchemaContext if editing a specific schema
+    if (activeSchemaId) {
+      updateSchemaState(activeSchemaId, {
+        lanAttributeRowData: newLanAttributeRowData
+      });
+    }
+    
+    // Also save to global context for compatibility
     setLanAttributeRowData(newLanAttributeRowData);
-  }, [languages, savedEntryCodes, attributeRowData]);
+  }, [languages, savedEntryCodes, attributeRowData, overlay, activeSchemaId, updateSchemaState]);
 
   const [columnDefs, setColumnDefs] = useState([]);
 
   useEffect(() => {
+    const CompactListRenderer = (params) => {
+      const text = params.value || "";
+      return (
+        <span
+          title={text}
+          style={{
+            display: "inline-block",
+            maxWidth: "100%",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis"
+          }}
+        >
+          {text}
+        </span>
+      );
+    };
+
     setColumnDefs([
       {
         field: "Attribute",
@@ -198,13 +234,14 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
         field: "List",
         headerName: t("List"),
         editable: false,
-        width: 258,
-        autoHeight: true,
+        flex: 2,
+        minWidth: 320,
+        tooltipField: "List",
+        cellRenderer: CompactListRenderer,
         cellStyle: (params) => {
-          if (attributesWithLists.includes(params.data.Attribute)) {
-            return { whiteSpace: "pre-wrap", wordBreak: "break-word" };
-          }
-          return greyCellStyle;
+          return attributesWithLists.includes(params.data.Attribute)
+            ? {}
+            : greyCellStyle;
         }
       }
     ]);

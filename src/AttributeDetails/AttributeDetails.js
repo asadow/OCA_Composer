@@ -19,7 +19,6 @@ import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 export default function AttributeDetails({
   pageBack,
   pageForward,
-  insertStep,
   removeStep
 }) {
   const { t } = useTranslation();
@@ -72,6 +71,7 @@ export default function AttributeDetails({
   useEffect(() => {
     if (editingSchemaId && initializedSchemaRef.current !== editingSchemaId) {
       initializedSchemaRef.current = editingSchemaId;
+      setLoading(true);
 
       const schemaState = getSchemaState(editingSchemaId);
 
@@ -79,6 +79,7 @@ export default function AttributeDetails({
       if (schemaState.attributes && schemaState.attributes.length > 0) {
         setAttributeRowData(schemaState.attributes);
         setAttributesList(schemaState.attributesList || []);
+        setLoading(false);
       } else {
         // Initialize from OCA package if no existing data
 
@@ -90,11 +91,16 @@ export default function AttributeDetails({
             ([key, value]) => {
               // Check if this attribute has entry codes (is a list)
               const hasEntryCodes =
-                schemaData.overlays?.entry &&
+                (schemaData.overlays?.entry &&
                 schemaData.overlays.entry.some(
                   (entryOverlay) =>
                     entryOverlay.attribute_entries && entryOverlay.attribute_entries[key]
-                );
+                )) ||
+                (schemaData.overlays?.entry_code &&
+                schemaData.overlays.entry_code.attribute_entry_codes &&
+                schemaData.overlays.entry_code.attribute_entry_codes[key]);
+              
+
 
               // Handle schema references (refs/refn) - these should be "Child Schema" not a type
               let displayType = value;
@@ -128,6 +134,8 @@ export default function AttributeDetails({
             attributes: newAttributeRowData,
             attributesList: Object.keys(schemaAttributes)
           });
+
+          // Entry Codes step is managed centrally in Home.js
 
           // Update overlay context with schema's overlay data
           if (schemaData.overlays) {
@@ -168,16 +176,22 @@ export default function AttributeDetails({
               newOverlay.entry = entryOverlays;
             }
 
+            // Import entry_code overlays
+            if (schemaData.overlays.entry_code) {
+              newOverlay.entry_code = schemaData.overlays.entry_code;
+            }
+
             setOverlay(newOverlay);
           }
         }
+        setLoading(false);
       }
     }
   }, [editingSchemaId, OCAPackage]);
 
   // Save attribute data to MultiSchemaContext whenever it changes
   useEffect(() => {
-    if (editingSchemaId && attributeRowData.length > 0) {
+    if (editingSchemaId) {
       updateSchemaState(editingSchemaId, {
         attributes: attributeRowData,
         attributesList
@@ -333,7 +347,7 @@ export default function AttributeDetails({
       setAttributesWithLists(newAttributesWithLists);
       if (newAttributesWithLists.length > 0) {
         entryCodesRef.current = true;
-        insertStep(2, { label: "Entry Codes", page: "Codes" });
+        // Entry Codes step already inserted centrally
       } else {
         removeStep("Entry Codes");
       }
@@ -368,7 +382,7 @@ export default function AttributeDetails({
       isForward
       pageForward={pageForwardSave}
     >
-      {loading && attributeRowData?.length > 40 && <Loading />}
+      {loading && <Loading />}
       {showCard && (
         <ErrorPopup onClose={() => setShowCard(false)}>
           <Box>

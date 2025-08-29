@@ -27,10 +27,9 @@ const useHandleAllDrop = (pageForward) => {
     setRawFile,
     excelSheetChoice,
     setExcelSheetChoice,
-    setOCAPackage,
-    setEditingSchemaId
+    setOCAPackage
   } = useContext(Context);
-  const { clearAllSchemas } = useMultiSchema();
+  const { clearAllSchemas, switchToSchema } = useMultiSchema();
   const { processLanguages, processMetadata, processLabelsDescriptionRootUnitsEntries } =
     useZipParser();
 
@@ -290,8 +289,8 @@ const useHandleAllDrop = (pageForward) => {
       acceptedFiles.forEach((file) => {
         const reader = new FileReader();
         const rABS = !!reader.readAsBinaryString; // converts object to boolean
-        reader.onabort = () => console.log("file reading was aborted");
-        reader.onerror = () => console.log("file reading has failed");
+            reader.onabort = () => {}; // console.log("file reading was aborted");
+    reader.onerror = () => {}; // console.log("file reading has failed");
         reader.onload = (e) => {
           const bstr = e.target.result;
           const workbook = XLSX.read(bstr, {
@@ -560,7 +559,7 @@ const useHandleAllDrop = (pageForward) => {
           // );
           setOCAPackage(jsonFile);
           // Set editing schema to root schema
-          setEditingSchemaId(jsonFile.oca_bundle.bundle.d);
+          switchToSchema(jsonFile.oca_bundle.bundle.d, jsonFile);
           handleBundleJSONDrop(modifiedBundle, jsonFile);
         } else if (jsonFile?.bundle) {
           const modifiedJsonFile = replaceAttributeCharsInParsedJson(jsonFile.bundle);
@@ -569,10 +568,10 @@ const useHandleAllDrop = (pageForward) => {
             const sanitizedOcaPackage = { ...jsonFile, bundle: modifiedJsonFile };
             setOCAPackage(sanitizedOcaPackage);
             // Set editing schema to root schema
-            setEditingSchemaId(jsonFile.bundle.d);
+            switchToSchema(jsonFile.bundle.d, sanitizedOcaPackage);
             handleBundleJSONDrop(modifiedJsonFile, sanitizedOcaPackage);
           } else {
-            setEditingSchemaId(jsonFile.bundle.d);
+            switchToSchema(jsonFile.bundle.d, jsonFile);
             handleBundleJSONDrop(modifiedJsonFile);
           }
         } else if (jsonFile?.schema?.[0]) {

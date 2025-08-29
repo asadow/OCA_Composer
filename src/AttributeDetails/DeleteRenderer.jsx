@@ -1,7 +1,7 @@
-import React, { useContext } from "react";
+import React from "react";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import { CustomPalette } from "../constants/customPalette";
-import { Context } from "../App";
+import CustomPalette from "../constants/customPalette";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 
 const DeleteRenderer = ({
   data,
@@ -10,15 +10,15 @@ const DeleteRenderer = ({
   setAttributesList,
   setAttributeRowData,
   canDelete,
-  setCanDelete
+  setCanDelete,
+  currentRows
 }) => {
-  const { attributeRowData } = useContext(Context);
-
+  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
   const handleDeleteClick = () => {
     gridRef.current.api.stopEditing();
     
-    // Use the global context data instead of gridRef.current.props.rowData
-    const currentRowData = attributeRowData || [];
+    // Use the latest rows passed from the grid state
+    const currentRowData = currentRows || [];
     const newAttributeRowData = JSON.parse(JSON.stringify(currentRowData));
     
     // Update types from typesObjectRef
@@ -39,6 +39,23 @@ const DeleteRenderer = ({
       
       // Update canDelete based on remaining attributes (allow deletion down to 0)
       setCanDelete(newAttributeRowData.length > 0);
+
+      // Sync MultiSchema state: remove from attributes, attributesList, attributesWithLists, and entryCodes
+      if (activeSchemaId) {
+        const schemaState = getSchemaState(activeSchemaId) || {};
+        const nextEntryCodes = { ...(schemaState.entryCodes || {}) };
+        delete nextEntryCodes[data.Attribute];
+
+        const prevLists = schemaState.attributesWithLists || [];
+        const nextLists = prevLists.filter((a) => a !== data.Attribute);
+
+        updateSchemaState(activeSchemaId, {
+          attributes: newAttributeRowData,
+          attributesList: updatedAttributesList,
+          entryCodes: nextEntryCodes,
+          attributesWithLists: nextLists
+        });
+      }
     }
   };
   

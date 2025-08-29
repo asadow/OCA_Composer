@@ -9,9 +9,10 @@ export const CharacterEncodingTypeRenderer = (props) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleChange = (e) => {
+    const { node } = props;
     setType(e.target.value);
-    props.node.updateData({
-      ...props.node.data,
+    node.updateData({
+      ...node.data,
       "Character Encoding": e.target.value
     });
     setIsDropdownOpen(false);
@@ -29,9 +30,9 @@ export const CharacterEncodingTypeRenderer = (props) => {
     }
   };
 
-  const typesDisplay = displayValues.map((value, index) => (
+  const typesDisplay = displayValues.map((value) => (
     <MenuItem
-      key={index + "_" + value}
+      key={value}
       value={value}
       sx={{ border: "none", height: "2rem", fontSize: "small" }}
     >

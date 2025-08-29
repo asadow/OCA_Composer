@@ -481,7 +481,7 @@ const useExportLogic = () => {
       });
       worksheetMain.columns = allColumns;
     } catch (error) {
-      console.log("Error creating 'Main' worksheet", error);
+      // console.log("Error creating 'Main' worksheet", error);
     }
 
     // CREATE 'LANGUAGE' WORKSHEETS

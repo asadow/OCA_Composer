@@ -160,10 +160,10 @@ const useMultiSchemaExport = () => {
       // If we're editing a specific schema, export that schema
       if (activeSchemaId) {
         return await exportIndividualSchema(activeSchemaId);
-      } else {
+      } 
         // Otherwise export the entire multi-schema package
         return await exportMultiSchemaPackage();
-      }
+      
     } catch (err) {
       setError(`Export failed: ${err.message}`);
       return false;

@@ -9,7 +9,7 @@ import SchemaAccordionItem from "./SchemaAccordionItem";
 import WriteASchemaAccordionItem from "./WriteASchemaAccordionItem";
 import StoreASchemaAccordionItem from "./StoreASchemaAccordionItem";
 import CustomAnchorLink from "../components/CustomAnchorLink";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import Drop from "../StartSchema/Drop";
 import useHandleAllDrop from "../StartSchema/useHandleAllDrop";
 import useGenerateReadMe from "../ViewSchema/useGenerateReadMe";

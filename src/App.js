@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ReactGA from "react-ga4";
 import { Box, ThemeProvider } from "@mui/material";
 import "./App.css";
-import { CustomTheme } from "./constants/theme";
+import CustomTheme from "./constants/theme";
 import Home from "./Home";
 import StartSchemaHelp from "./UsersHelp/Start_Schema_Help";
 import getListOfSelectedOverlays from "./constants/getListOfSelectedOverlays";

@@ -78,7 +78,7 @@ export default function SchemaAwareSchemaMetadata({
     } catch (error) {
       console.error("Error loading schema metadata:", error);
     }
-  }, [activeSchemaId, OCAPackage, updateSchemaState, setSchemaDescription]);
+  }, [activeSchemaId, OCAPackage, setSchemaDescription]); // Removed updateSchemaState from dependencies
 
   // Handle schema metadata updates
   const handleSchemaNameChange = (newName) => {

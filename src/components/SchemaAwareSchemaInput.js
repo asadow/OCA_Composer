@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { TextField, Typography, Box, Tooltip } from "@mui/material";
-import { CustomPalette } from "../constants/customPalette";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { useTranslation } from "react-i18next";
+import CustomPalette from "../constants/customPalette";
 
 /**
  * Schema-Aware Schema Input Component

@@ -1,12 +1,12 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
-import { Context } from '../App';
-import BackNextSkeleton from '../components/BackNextSkeleton';
-import { Box } from '@mui/material';
-import { flexCenter, gridStyles, preWrapWordBreak } from '../constants/styles';
-import { AgGridReact } from 'ag-grid-react';
-import CellHeader from '../components/CellHeader';
-import DeleteConfirmation from './DeleteConfirmation';
-import { useTranslation } from 'react-i18next';
+import React, { useContext, useEffect, useRef, useState } from "react";
+import { Box } from "@mui/material";
+import { AgGridReact } from "ag-grid-react";
+import { useTranslation } from "react-i18next";
+import { Context } from "../App";
+import BackNextSkeleton from "../components/BackNextSkeleton";
+import { flexCenter, gridStyles, preWrapWordBreak } from "../constants/styles";
+import CellHeader from "../components/CellHeader";
+import DeleteConfirmation from "./DeleteConfirmation";
 
 const RequiredEntries = () => {
   const { t } = useTranslation();
@@ -26,7 +26,7 @@ const RequiredEntries = () => {
     const inputRef = useRef();
 
     const handleCheckboxChange = (event) => {
-      const checked = event.target.checked;
+      const { checked } = event.target;
       gridRef.current.api.forEachNode((node) => {
         node.setDataValue("Make selected entries required", checked);
       });
@@ -39,8 +39,8 @@ const RequiredEntries = () => {
     return (
       <CellHeader
         headerText={
-          <Box sx={{ display: 'flex', direction: 'row', alignItems: 'center' }}>
-            {t('Required entries')} {' '}
+          <Box sx={{ display: "flex", direction: "row", alignItems: "center" }}>
+            {t("Required entries")} {" "}
             <input
               type="checkbox"
               ref={inputRef}
@@ -48,7 +48,7 @@ const RequiredEntries = () => {
             />
           </Box>
         }
-        helpText={t('Check for each attribute where the data entry cannot be left empty in a dataset')} />
+        helpText={t("Check for each attribute where the data entry cannot be left empty in a dataset")} />
     );
   };
 
@@ -60,7 +60,7 @@ const RequiredEntries = () => {
     }, [value]);
 
     const handleChange = (event) => {
-      const checked = event.target.checked;
+      const { checked } = event.target;
       gridRef.current.api.forEachNode((node, index) => {
         if (rowIndex === index) {
           node.setDataValue("Make selected entries required", checked);
@@ -81,7 +81,7 @@ const RequiredEntries = () => {
         width: 180,
         autoHeight: true,
         cellStyle: () => preWrapWordBreak,
-        headerComponent: () => <CellHeader headerText={t('Attributes')} helpText={t('This is the name for the attribute and, for example...')} />,
+        headerComponent: () => <CellHeader headerText={t("Attributes")} helpText={t("This is the name for the attribute and, for example...")} />,
       },
       {
         field: "Make selected entries required",
@@ -95,8 +95,8 @@ const RequiredEntries = () => {
   }, [attributesList]);
 
   const handleForward = () => {
-    setSelectedOverlay('');
-    setCurrentPage('Overlays');
+    setSelectedOverlay("");
+    setCurrentPage("Overlays");
   };
 
   const handleDeleteCurrentOverlay = () => {
@@ -110,12 +110,12 @@ const RequiredEntries = () => {
 
     // Delete attribute from characterEncodingRowData
     const newCharacterEncodingRowData = characterEncodingRowData.map((row) => {
-      delete row['Make selected entries required'];
+      delete row["Make selected entries required"];
       return row;
     });
     setCharacterEncodingRowData(newCharacterEncodingRowData);
-    setSelectedOverlay('');
-    setCurrentPage('Overlays');
+    setSelectedOverlay("");
+    setCurrentPage("Overlays");
   };
 
   return (

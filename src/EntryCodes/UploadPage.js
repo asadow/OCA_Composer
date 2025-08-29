@@ -1,13 +1,13 @@
 import React from "react";
-import BackNextSkeleton from "../components/BackNextSkeleton";
 import { Box, Button, FormControl, Select, Typography } from "@mui/material";
+import { AgGridReact } from "ag-grid-react";
+import { useTranslation } from "react-i18next";
+import BackNextSkeleton from "../components/BackNextSkeleton";
 import Drop from "../StartSchema/Drop";
 import useHandleEntryCodeDrop from "./useHandleEntryCodeDrop";
 import { gridStyles } from "../constants/styles";
-import { AgGridReact } from "ag-grid-react";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import csvFileExample from "../assets/csv_example.png";
-import { useTranslation } from "react-i18next";
 
 const UploadPage = () => {
   const { t } = useTranslation();
@@ -156,7 +156,7 @@ const UploadPage = () => {
                 rowData={tempEntryCodeRowData}
                 columnDefs={columnDefs}
                 defaultColDef={columnDefs}
-                suppressFieldDotNotation={true}
+                suppressFieldDotNotation
               />
             </div>
           )}

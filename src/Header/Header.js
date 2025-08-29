@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Typography, Tooltip, Button, Box, useMediaQuery } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import logo from "../assets/agri-logo.png";
 import logoWhite from "../assets/agri-logo-white.png";
 import HeaderWrapper from "./HeaderWrapper";

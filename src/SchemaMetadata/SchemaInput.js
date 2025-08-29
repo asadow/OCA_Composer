@@ -2,12 +2,12 @@ import React, { useContext, useState } from "react";
 import { TextField, Typography, Box, Tooltip, Button } from "@mui/material";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import { useTranslation } from "react-i18next";
 import { CustomPalette } from "../constants/customPalette";
 import { Context } from "../App";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { languageCodesObject } from "../constants/isoCodes";
 import Classification from "./Classification";
-import { useTranslation } from "react-i18next";
 import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 
 export default function SchemaInput({
@@ -43,7 +43,7 @@ export default function SchemaInput({
     e.preventDefault();
 
     let newSchema = JSON.parse(JSON.stringify(schemaDescription));
-    let newText = e.target.value;
+    const newText = e.target.value;
     newSchema = {
       ...newSchema,
       [language]: { ...newSchema[language], name: newText },
@@ -61,7 +61,7 @@ export default function SchemaInput({
     e.preventDefault();
 
     let newSchema = JSON.parse(JSON.stringify(schemaDescription));
-    let newText = e.target.value;
+    const newText = e.target.value;
     newSchema = {
       ...newSchema,
       [language]: { ...newSchema[language], description: newText },
@@ -71,7 +71,7 @@ export default function SchemaInput({
 
   const handleDelete = () => {
     const languageIndex = languages.indexOf(language);
-    let newLanguageArray = [...languages];
+    const newLanguageArray = [...languages];
     newLanguageArray.splice(languageIndex, 1);
     setLanguages(newLanguageArray);
     const newSchemaDescription = JSON.parse(JSON.stringify(schemaDescription));
@@ -90,7 +90,7 @@ export default function SchemaInput({
         }}
       >
         {index === 0 ? <Classification /> : (
-          <Box sx={{ marginBottom: '1rem', height: '5rem' }} />
+          <Box sx={{ marginBottom: "1rem", height: "5rem" }} />
         )}
         <Box
           sx={{
@@ -187,7 +187,7 @@ export default function SchemaInput({
               color: CustomPalette.BLACK,
             }}
           >
-            {t('Name of Schema')}
+            {t("Name of Schema")}
           </Typography>
           {language === languages[0] && (
             <Tooltip
@@ -231,11 +231,11 @@ export default function SchemaInput({
               width: "6rem",
             }}
           >
-            {t('Description')}
+            {t("Description")}
           </Typography>
           {language === languages[0] && (
             <Tooltip
-              title={t('The description of the schema that will help yourself...')}
+              title={t("The description of the schema that will help yourself...")}
               placement="right"
               arrow
             >
@@ -244,7 +244,7 @@ export default function SchemaInput({
           )}
         </Box>
                  <TextField
-           multiline={true}
+           multiline
            rows="5"
            id={descriptionFieldId}
            type="text"

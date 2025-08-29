@@ -4,7 +4,7 @@ import { Box, Typography, Tooltip } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { Context } from "../App";
 import { useMultiSchema } from "../context/MultiSchemaContext";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import BackNextSkeleton from "./BackNextSkeleton";
 import Overlays from "../Overlays/Overlays";
 import { getSchemaDataById } from "../SchemaVisualization/dataUtils";

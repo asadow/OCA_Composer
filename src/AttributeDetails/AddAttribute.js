@@ -7,7 +7,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { useTranslation } from "react-i18next";
 import { Context } from "../App";
 import { removeSpacesFromString } from "../constants/removeSpaces";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 
 export default function AddAttribute({
   addButton1,

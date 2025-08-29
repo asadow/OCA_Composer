@@ -5,6 +5,8 @@ import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Description from "./Description";
 import LanguageSelection from "./LanguageSelection";
 import NavigationCard from "../constants/NavigationCard";
@@ -14,9 +16,6 @@ import { removeSpacesFromObjectOfObjects } from "../constants/removeSpaces";
 import IntroCard from "./IntroCard";
 import IsoCard from "./IsoCard";
 import BackNextSkeleton from "../components/BackNextSkeleton";
-import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 
 export default function SchemaMetadata({
   pageBack,
@@ -38,21 +37,10 @@ export default function SchemaMetadata({
     history, 
     setHistory, 
     setCurrentPage,
-    OCAPackage,
-    editingSchemaId
   } = useContext(Context);
 
-  // Get the schema data for the currently editing schema
-  const currentSchemaData = editingSchemaId ? getSchemaDataById(OCAPackage, editingSchemaId) : null;
-  
-  // If we're editing a specific schema, set the schema name to the schema ID or field name
-  const schemaName = currentSchemaData?.isPlaceholder ? currentSchemaData.fieldName : editingSchemaId;
 
-  const toTitleCase = (str) => {
-    return str.toLowerCase().replace(/^(.)|\s(.)/g, function(match) {
-      return match.toUpperCase();
-    });
-  };
+  const toTitleCase = (str) => str.toLowerCase().replace(/^(.)|\s(.)/g, (match) => match.toUpperCase());
 
   const handleForward = () => {
     const noSpacesObject = removeSpacesFromObjectOfObjects(schemaDescription);
@@ -75,14 +63,14 @@ export default function SchemaMetadata({
     }
   };
 
-  //When showIsoInput component is visible, prevents user from clicking other buttons on the screen
+  // When showIsoInput component is visible, prevents user from clicking other buttons on the screen
   const defaultButton = useRef();
   const addCustomButton = useRef();
 
   useEffect(() => {
     const handleDisableClick = (event) => {
       if (showIsoInput) {
-        const target = event.target;
+        const { target } = event;
         if (
           target !== defaultButton.current &&
           target !== addCustomButton.current
@@ -103,9 +91,9 @@ export default function SchemaMetadata({
 
   const moveBackward = () => {
     if (history.length > 1 && history[history.length - 2] === "Landing") {
-      setHistory(prev => prev.slice(0, prev.length - 1));
-      setCurrentPage('Landing');
-      navigate('/');
+      setHistory((prev) => prev.slice(0, prev.length - 1));
+      setCurrentPage("Landing");
+      navigate("/");
     } else {
       pageBack();
     }
@@ -136,7 +124,7 @@ export default function SchemaMetadata({
         }}
       >
 
-        <Box sx={{ display: "flex", justifyContent: 'space-between' }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
           <Typography
             sx={{
               fontSize: 20,
@@ -146,7 +134,7 @@ export default function SchemaMetadata({
               color: CustomPalette.PRIMARY,
             }}
           >
-            {t('Schema Description')}
+            {t("Schema Description")}
           </Typography>
           <Box sx={{ position: "relative", alignSelf: "flex-end" }}>
             <Box
@@ -191,7 +179,7 @@ export default function SchemaMetadata({
                   m: 2,
                 }}
               >
-                {t('Add Language')}
+                {t("Add Language")}
                 {showLanguages === true ? (
                   <RemoveCircleIcon />
                 ) : (

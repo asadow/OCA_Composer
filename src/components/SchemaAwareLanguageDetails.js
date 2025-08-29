@@ -5,7 +5,7 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import i18next from "i18next";
 import { Context } from "../App";
 import { useMultiSchema } from "../context/MultiSchemaContext";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import { codesToLanguages } from "../constants/isoCodes";
 import BackNextSkeleton from "./BackNextSkeleton";
 import LanGrid from "../LanguageDetails/LanGrid";

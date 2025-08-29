@@ -1,6 +1,6 @@
 import React from "react";
 import { Box } from "@mui/material";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 
 const Spinner = ({ text = "Loading...", size = 32 }) => (
   <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 4 }}>

@@ -1,13 +1,13 @@
-import { useContext, useMemo, useRef, useState } from "react";
+import React, { useContext, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Box } from "@mui/material";
+import { AgGridReact } from "ag-grid-react";
 import { gridStyles, preWrapWordBreak } from "../constants/styles";
 import CellHeader from "../components/CellHeader";
-import { useTranslation } from "react-i18next";
 import DataStandardAutocompleteEditor from "./DataStandards/DataStandardAutocompleteEditor";
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import { Context } from "../App";
 import DeleteConfirmation from "./DeleteConfirmation";
-import { Box } from "@mui/material";
-import { AgGridReact } from "ag-grid-react";
 import Loading from "../components/Loading";
 
 const DataStandards = () => {
@@ -33,32 +33,31 @@ const DataStandards = () => {
       },
     }));
 
-    setSelectedOverlay('');
-    setCurrentPage('Overlays');
+    setSelectedOverlay("");
+    setCurrentPage("Overlays");
   };
 
   const handleSave = () => {
     gridRef.current.api.stopEditing();
-    const rowData = gridRef.current.api.getRenderedNodes()?.map(rowNode => rowNode?.data);
+    const rowData = gridRef.current.api.getRenderedNodes()?.map((rowNode) => rowNode?.data);
     setDataStandardsRowData(rowData);
-  }
+  };
 
   const handleForward = () => {
     handleSave();
-    setSelectedOverlay('');
-    setCurrentPage('Overlays');
+    setSelectedOverlay("");
+    setCurrentPage("Overlays");
   };
 
   const handleBack = () => {
     setShowDeleteConfirmation(true);
-  }
+  };
 
   const onGridReady = () => {
     setLoading(false);
   };
 
-  const columnDefs = useMemo(() => {
-    return [
+  const columnDefs = useMemo(() => [
       {
         field: "Attribute",
         width: 180,
@@ -67,13 +66,12 @@ const DataStandards = () => {
         headerComponent: () => <CellHeader headerText={t("Attributes")} helpText='This is the name for the attribute and, for example, will be the column header in every tabular data set no matter what language.' />,
       },
       {
-        field: 'DataStandard',
-        headerComponent: () => <CellHeader headerText={t('Data Standard')} helpText='This is the data standard that the values of an attribute should follow' />,
+        field: "DataStandard",
+        headerComponent: () => <CellHeader headerText={t("Data Standard")} helpText='This is the data standard that the values of an attribute should follow' />,
         cellRenderer: DataStandardAutocompleteEditor,
         flex: 1
       }
-    ];
-  }, [t]);
+    ], [t]);
 
   return (
     <BackNextSkeleton isForward pageForward={handleForward} isBack pageBack={handleBack} backText="Remove overlay">
@@ -92,13 +90,13 @@ const DataStandards = () => {
           rowData={dataStandardsRowData} 
           columnDefs={columnDefs} 
           domLayout="autoHeight"
-          stopEditingWhenCellsLoseFocus={true}
+          stopEditingWhenCellsLoseFocus
           onGridReady={onGridReady}
           />
         </Box>
       </Box>
     </BackNextSkeleton>
-  )
-}
+  );
+};
 
 export default DataStandards;

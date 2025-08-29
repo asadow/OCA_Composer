@@ -6,6 +6,7 @@ import SingleTable from "./SingleTable";
 import { removeSpacesAndColonFromArrayOfObjects } from "../constants/removeSpaces";
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import WarningEntryCodeDelete from "./WarningEntryCodeDelete";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 
 const errorMessages = {
   fieldEmpty: "Please fill out all fields",
@@ -17,14 +18,25 @@ export default function EntryCodes() {
   const [selectedAttributes, setSelectedAttributes] = useState({});
   const [selectedAttributesList, setSelectedAttributesList] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
+  // Multi-schema context
+  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  
+  // Global context
   const {
-    attributeRowData,
-    entryCodeRowData,
+    attributeRowData: globalAttributeRowData,
+    entryCodeRowData: globalEntryCodeRowData,
+    setEntryCodeRowData,
     setSavedEntryCodes,
-    attributesWithLists,
+    attributesWithLists: globalAttributesWithLists,
     setCurrentPage,
     languages
   } = useContext(Context);
+
+  // Use MultiSchemaContext data if editing a specific schema, otherwise use global context
+  const currentSchemaState = getSchemaState(activeSchemaId);
+  const attributeRowData = activeSchemaId && currentSchemaState ? currentSchemaState.attributes || [] : globalAttributeRowData;
+  const entryCodeRowData = activeSchemaId && currentSchemaState ? currentSchemaState.entryCodes || {} : globalEntryCodeRowData;
+  const attributesWithLists = activeSchemaId && currentSchemaState ? currentSchemaState.attributesWithLists || [] : globalAttributesWithLists;
   const [chosenTable, setChosenTable] = useState(0);
   const codeRefs = useRef();
   const pageForwardDisabledRef = useRef(false);
@@ -43,7 +55,30 @@ export default function EntryCodes() {
     const attributeArray = filteredAttributes.map((item) => item.Attribute);
     setSelectedAttributes(filteredAttributes);
     setSelectedAttributesList(attributeArray);
-  }, [attributeRowData]);
+
+    // Align entry code row arrays to the exact order of selected attributes to avoid index drift
+    // Source of truth for existing codes is the schema state's entryCodeRowData (object keyed by attribute)
+    const emptyRow = (() => {
+      const row = { Code: "" };
+      languages.forEach((lang) => {
+        row[lang] = "";
+      });
+      return row;
+    })();
+    const alignedEntryCodesArray = attributeArray.map((attr) => {
+      const rowsForAttr = Array.isArray(entryCodeRowData[attr])
+        ? entryCodeRowData[attr]
+        : [emptyRow];
+      // Deep clone to decouple grid edits
+      return rowsForAttr.map((r) => ({ ...r }));
+    });
+    setEntryCodeRowData(alignedEntryCodesArray);
+
+    // If no attributes are marked as lists, redirect to LanguageDetails
+    if (filteredAttributes.length === 0) {
+      setCurrentPage("LanguageDetails");
+    }
+  }, [attributeRowData, languages, entryCodeRowData, setEntryCodeRowData, setCurrentPage]);
 
   const handleSave = () => {
     codeRefs.current.forEach((grid) => {
@@ -51,16 +86,19 @@ export default function EntryCodes() {
     });
 
     const newEntryCodeObject = {};
-    attributesWithLists.forEach((item, index) => {
+    attributesWithLists.forEach((item) => {
       const newEntryCodeArray = [];
-      entryCodeRowData[index].forEach((obj) => {
-        const newObj = {};
-        newObj.Code = obj.Code;
-        languages.forEach((language) => {
-          newObj[language] = obj[language] || "";
+      // Check if entryCodeRowData exists for this attribute
+      if (entryCodeRowData[item] && Array.isArray(entryCodeRowData[item])) {
+        entryCodeRowData[item].forEach((obj) => {
+          const newObj = {};
+          newObj.Code = obj.Code;
+          languages.forEach((language) => {
+            newObj[language] = obj[language] || "";
+          });
+          newEntryCodeArray.push(newObj);
         });
-        newEntryCodeArray.push(newObj);
-      });
+      }
 
       newEntryCodeObject[item] = newEntryCodeArray;
     });
@@ -90,6 +128,14 @@ export default function EntryCodes() {
       );
     });
 
+    // Save to MultiSchemaContext if editing a specific schema
+    if (activeSchemaId) {
+      updateSchemaState(activeSchemaId, {
+        entryCodes: newEntryCodesObject
+      });
+    }
+    
+    // Also save to global context for compatibility
     setSavedEntryCodes(newEntryCodesObject);
   };
 

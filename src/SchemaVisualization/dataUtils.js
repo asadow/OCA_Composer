@@ -146,8 +146,8 @@ export const getSchemaDataById = (ocaPackage, schemaId, language = "eng") => {
 
 
 
-  // If it's the root schema (either by digest, by "root" ID, or by schema name)
-  if (schemaId === ocaPackage.bundle?.d || schemaId === "root") {
+  // If it's the root schema (either by bundle digest, capture base digest, by "root" ID, or by schema name)
+  if (schemaId === ocaPackage.bundle?.d || schemaId === ocaPackage.bundle?.capture_base?.d || schemaId === "root") {
     // Get the schema name and description from meta overlays
     const metaOverlay = ocaPackage.bundle.overlays?.meta?.find((m) => m.language === language) || 
                        ocaPackage.bundle.overlays?.meta?.[0];

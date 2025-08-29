@@ -82,8 +82,8 @@ export default function LanguageSelection({
 
     // quotes at start or end of language name can create export errors
     if (
-      languageToAdd.startsWith('"') ||
-      languageToAdd.endsWith('"') ||
+      languageToAdd.startsWith("\"") ||
+      languageToAdd.endsWith("\"") ||
       languageToAdd.startsWith("'") ||
       languageToAdd.endsWith("'") ||
       languageToAdd.startsWith("`") ||
