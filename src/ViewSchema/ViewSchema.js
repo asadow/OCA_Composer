@@ -2,7 +2,14 @@ import React, { useContext, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import i18next from "i18next";
-import { Box, Button, Typography, Tooltip } from "@mui/material";
+import {
+  Box,
+  Button,
+  Typography,
+  Tooltip,
+  ToggleButton,
+  ToggleButtonGroup
+} from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { Context } from "../App";
@@ -30,6 +37,7 @@ export default function ViewSchema({
 }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
+
   const {
     languages,
     attributeRowData,
@@ -47,8 +55,9 @@ export default function ViewSchema({
     switchToSchema,
     exportSchemaChanges,
     getModifiedSchemas,
-    modifiedSchemas,
-    getSchemaState
+
+    getSchemaState,
+    schemaStates
   } = useMultiSchema();
 
   const languageIndex = languages.findIndex(
@@ -78,22 +87,21 @@ export default function ViewSchema({
   const [loading, setLoading] = useState(true);
   const [visualizationMode, setVisualizationMode] = useState("detailed");
   const [updatedOCAPackage, setUpdatedOCAPackage] = useState(OCAPackage);
+  const [vizVersion, setVizVersion] = useState(0);
 
   // (unused helper removed)
 
   // Enhanced schema switching with proper navigation
   const handleSchemaSwitch = useCallback(
     (schemaId) => {
-      if (schemaId && schemaId !== activeSchemaId) {
-        // Use multi-schema context to switch to the selected schema
+      if (!schemaId) return;
+      // Switch only if different, but always navigate to the editor
+      if (schemaId !== activeSchemaId) {
         switchToSchema(schemaId, OCAPackage);
-        // Set the schema being edited
-        setEditingSchemaId(schemaId);
-        // Navigate to the editor step 2 (Details) to edit the selected schema
-        // This will trigger the AttributeDetails component which will add the Entry Codes step if needed
-        setCurrentPage("Details");
-        navigate("/start");
       }
+      setEditingSchemaId(schemaId);
+      setCurrentPage("Details");
+      navigate("/start");
     },
     [
       activeSchemaId,
@@ -111,37 +119,51 @@ export default function ViewSchema({
 
   // Update the package data when schemas are modified
   useEffect(() => {
-    if (OCAPackage) {
-      if (modifiedSchemas.size > 0) {
-        // Export with schema changes
-        const modifiedPackage = exportSchemaChanges(OCAPackage);
-        setUpdatedOCAPackage(modifiedPackage);
-      } else {
-        // Use original package if no changes
-        setUpdatedOCAPackage(OCAPackage);
-      }
-    }
-  }, [OCAPackage, modifiedSchemas, exportSchemaChanges]);
+    if (!OCAPackage) return;
+    // Always regenerate a derived package from current multi-schema state
+    const modifiedPackage = exportSchemaChanges(OCAPackage);
+    console.log("ViewSchema: Updating package, vizVersion:", vizVersion + 1);
+    console.log("ViewSchema: Modified schemas:", getModifiedSchemas());
+    setUpdatedOCAPackage(modifiedPackage);
+    setVizVersion((v) => v + 1);
+  }, [OCAPackage, schemaStates, exportSchemaChanges]);
 
   // Removed in favor of global language toggle (EN/FR)
 
   const handleClickDownload = async () => {
     try {
       setLoading(true);
-
       // Use multi-schema export if we have modified schemas
       const modifiedSchemas = getModifiedSchemas();
       if (modifiedSchemas.length > 0) {
-        // Export with schema changes
-        const modifiedPackage = exportSchemaChanges(OCAPackage);
-        // Use the multi-schema export logic
-        await multiSchemaExportData(modifiedPackage);
+        // Export with schema changes already reflected in updatedOCAPackage
+        const pkg = updatedOCAPackage || exportSchemaChanges(OCAPackage);
+        try {
+          await multiSchemaExportData(pkg);
+        } catch (exportError) {
+          // If the main export fails, we'll use our fallback
+        }
+        // Fallback: trigger a JSON download if the exporter didn't prompt a file save
+        const blob = new Blob([JSON.stringify(pkg, null, 2)], {
+          type: "application/json"
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "oca_bundle.json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        // Clear any export errors since we successfully downloaded
+        clearError();
+        clearMultiSchemaError();
       } else {
         // Use original export logic
         await originalExportData();
       }
     } catch (error) {
-      // console.error("Export failed:", error);
+      console.error("Export failed:", error);
     } finally {
       setLoading(false);
     }
@@ -311,7 +333,8 @@ export default function ViewSchema({
               }}
               disabled={exportDisabled}
             >
-              {t("Finish and Download")} <CheckCircleIcon />
+              {t("Finish and Download", { defaultValue: "Finish and Download" })}{" "}
+              <CheckCircleIcon />
             </Button>
           )}
           {addClearButton && (
@@ -326,7 +349,9 @@ export default function ViewSchema({
                 p: 1
               }}
             >
-              {t("Clear All Data and Restart")}
+              {t("Clear All Data and Restart", {
+                defaultValue: "Clear All Data and Restart"
+              })}
             </Button>
           )}
         </Box>
@@ -350,11 +375,15 @@ export default function ViewSchema({
                 color: CustomPalette.PRIMARY
               }}
             >
-              {t("Multi-Schema Visualization")}
+              {t("Multi-Schema Visualization", {
+                defaultValue: "Multi-Schema Visualization"
+              })}
             </Typography>
             <Box sx={{ marginLeft: "1rem", color: CustomPalette.GREY_600 }}>
               <Tooltip
-                title={t("Visual representation of references between schemas")}
+                title={t("Visual representation of references between schemas", {
+                  defaultValue: "Visual representation of references between schemas"
+                })}
                 placement="right"
                 arrow
               >
@@ -363,41 +392,46 @@ export default function ViewSchema({
             </Box>
           </Box>
 
-          {/* Mode toggle buttons */}
-          <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-            <Button
-              color="button"
-              variant="contained"
-              onClick={() => setVisualizationMode("tree")}
-              sx={{
-                backgroundColor:
-                  visualizationMode === "tree"
-                    ? CustomPalette.PRIMARY
-                    : CustomPalette.SECONDARY,
-                boxShadow: "none"
-              }}
-            >
-              {t("Tree View")}
-            </Button>
-            <Button
-              color="button"
-              variant="contained"
-              onClick={() => setVisualizationMode("detailed")}
-              sx={{
-                backgroundColor:
-                  visualizationMode === "detailed"
-                    ? CustomPalette.PRIMARY
-                    : CustomPalette.SECONDARY,
-                boxShadow: "none"
-              }}
-            >
-              {t("Detailed View")}
-            </Button>
+          {/* Mode toggle switch */}
+          <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <ToggleButtonGroup
+                exclusive
+                value={visualizationMode}
+                onChange={(_e, val) => {
+                  if (val) setVisualizationMode(val);
+                }}
+                size="small"
+                color="primary"
+                sx={{
+                  "& .MuiToggleButton-root": {
+                    border: `1px solid ${CustomPalette.PRIMARY}`,
+                    color: CustomPalette.PRIMARY,
+                    backgroundColor: CustomPalette.PINK_100,
+                    textTransform: "none",
+                    fontWeight: 600,
+                    "&:hover": {
+                      backgroundColor: CustomPalette.PINK_200
+                    }
+                  },
+                  "& .MuiToggleButton-root.Mui-selected": {
+                    color: CustomPalette.WHITE,
+                    backgroundColor: CustomPalette.PRIMARY,
+                    "&:hover": {
+                      backgroundColor: CustomPalette.SECONDARY
+                    }
+                  }
+                }}
+              >
+                <ToggleButton value="detailed">Attribute-to-Schema</ToggleButton>
+                <ToggleButton value="tree">Schema-to-Schema</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
           </Box>
 
           <Box sx={{ mb: 4, width: "100%" }}>
             <SchemaVisualizationEmbed
-              key={`viz-${updatedOCAPackage?.bundle?.d}-${modifiedSchemas.size}`}
+              key={`viz-${vizVersion}-${updatedOCAPackage?.bundle?.d}-${getModifiedSchemas().length}`}
               attributeRowData={attributeRowData}
               schemaDescription={schemaDescription}
               languages={filteredLanguages}
@@ -425,9 +459,10 @@ export default function ViewSchema({
                 return "";
               }
             })();
-            return name
-              ? `${t("Attribute Details for")} "${name}"`
-              : t("Attribute Details");
+            const label = t(
+              name ? `Attribute Details for "${name}"` : "Attribute Details"
+            );
+            return label;
           })()}
         </Typography>
         <Box sx={{ marginLeft: "0.5rem", color: CustomPalette.GREY_600 }}>

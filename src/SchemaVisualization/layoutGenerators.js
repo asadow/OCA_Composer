@@ -214,7 +214,7 @@ export const generateTreeLayout = (
       } else if (isRefn) {
         nodeData.children.push({
           id: key, // Use the field name (e.g., "q9") as the node ID
-          name: `${labels[key] || key}\n(placeholder child schema)`,
+          name: labels[key] || key,
           type: "placeholder",
           children: []
         });
@@ -258,10 +258,7 @@ export const generateTreeLayout = (
         currentSchemaId,
         nodeId: nodeData.id
       },
-      type:
-        nodeData.type === "placeholder"
-          ? "placeholderNode"
-          : "treeNode",
+      type: nodeData.type === "placeholder" ? "placeholderNode" : "treeNode",
       className: nodeData.type
     });
 
@@ -330,8 +327,6 @@ export const generateDetailedLayout = (
   const processNode = (nodeId, nodeType, title, fields, level = 0) => {
     if (allNodes.has(nodeId)) return;
 
-
-
     // No more field processing here - handled in UI component
     const nodeData = {
       id: nodeId,
@@ -345,8 +340,6 @@ export const generateDetailedLayout = (
       },
       level
     };
-
-
 
     allNodes.set(nodeId, nodeData);
 
@@ -373,7 +366,45 @@ export const generateDetailedLayout = (
       } else if (field.isPlaceholder) {
         const placeholderId = field.originalName || field.name; // Use the field name as the placeholder ID
 
-        processNode(placeholderId, "placeholder", field.name, [], level + 1);
+        // Check if this placeholder schema now has actual attributes
+        let placeholderFields = [];
+        let placeholderTitle = field.name;
+
+        // Look for the schema in dependencies to see if it has attributes
+        if (dependencies) {
+          const dependencyWithAttributes = dependencies.find((dep) => {
+            const metaOverlay =
+              dep.overlays?.meta?.find((m) => m.language === language) ||
+              dep.overlays?.meta?.[0];
+            return metaOverlay?.name === placeholderId;
+          });
+
+          if (
+            dependencyWithAttributes &&
+            dependencyWithAttributes.capture_base?.attributes
+          ) {
+            // This placeholder now has attributes, use them
+            placeholderFields = processAttributes(
+              dependencyWithAttributes.capture_base.attributes,
+              dependencyWithAttributes.overlays?.label?.find(
+                (l) => l.language === language
+              )?.attribute_labels || {}
+            );
+            const metaOverlay =
+              dependencyWithAttributes.overlays?.meta?.find(
+                (m) => m.language === language
+              ) || dependencyWithAttributes.overlays?.meta?.[0];
+            placeholderTitle = metaOverlay?.name || placeholderId;
+          }
+        }
+
+        processNode(
+          placeholderId,
+          "placeholder",
+          placeholderTitle,
+          placeholderFields,
+          level + 1
+        );
 
         allEdges.push({
           id: `${nodeId}-${placeholderId}`,

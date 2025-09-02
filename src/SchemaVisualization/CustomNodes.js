@@ -5,6 +5,7 @@ import React from "react";
 import { Handle, Position, NodeToolbar } from "@xyflow/react";
 import EditIcon from "@mui/icons-material/Edit";
 import "./SchemaVisualization.css";
+import { useTranslation } from "react-i18next";
 
 // Constants
 // Constants
@@ -38,18 +39,24 @@ const FieldHandle = ({ field }) => (
  * Placeholder Node Component - represents potential extension points
  */
 export const PlaceholderNode = ({ data }) => {
+  const { t } = useTranslation();
   const isRootNode = data.nodeId === "root";
   const isHighlighted = isRootNode
     ? data.currentSchemaId === data.rootId || data.currentSchemaId === "root"
     : data.currentSchemaId === data.nodeId;
 
+  // Extract the name from the label (remove any existing "placeholder" text)
+  const label = data.label || "Placeholder Child Schema";
+  const name = label.replace(/\s*\(placeholder.*?\)/i, "").trim();
+  const displayName = name || "Placeholder";
+
   return (
     <div className={`placeholder-node ${isHighlighted ? "highlighted" : ""}`}>
       <Handle type="target" position={Position.Top} />
       <div className="placeholder-node-content">
-        <div className="placeholder-icon">📝</div>
         <div className="placeholder-label">
-          {data.label || "Placeholder Child Schema"}
+          <div className="placeholder-name">{displayName}</div>
+          <div className="placeholder-status">{t("(placeholder)")}</div>
         </div>
         {data.onNodeClick && (
           <button

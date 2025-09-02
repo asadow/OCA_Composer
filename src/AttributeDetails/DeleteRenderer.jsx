@@ -69,6 +69,7 @@ const DeleteRenderer = ({
           cursor: "pointer"
         }}
         onClick={handleDeleteClick}
+        title="Delete attribute"
       />
     )
   );

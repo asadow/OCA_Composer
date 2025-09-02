@@ -50,12 +50,8 @@ export const processAttributes = (attributes, labels = {}) => {
     const isReference = typeof value === "string" && value.startsWith("refs:");
     const isPlaceholder = typeof value === "string" && value.startsWith("refn:");
 
-
-
     // Truncate field name if it's too long
     const truncatedName = truncateText(fieldName, FIELD_NAME_MAX_LENGTH);
-
-
 
     return {
       name: truncatedName,
@@ -122,8 +118,6 @@ export const extractSchemaDataFromPackage = (ocaPackage, language = "eng") => {
     {};
   const labels = labelOverlay.attribute_labels || {};
 
-
-
   return {
     dependencies: ocaPackage.dependencies || [],
     attributes: ocaPackage.bundle.capture_base?.attributes || {},
@@ -144,29 +138,35 @@ export const getSchemaDataById = (ocaPackage, schemaId, language = "eng") => {
     return null;
   }
 
-
-
   // If it's the root schema (either by bundle digest, capture base digest, by "root" ID, or by schema name)
-  if (schemaId === ocaPackage.bundle?.d || schemaId === ocaPackage.bundle?.capture_base?.d || schemaId === "root") {
+  if (
+    schemaId === ocaPackage.bundle?.d ||
+    schemaId === ocaPackage.bundle?.capture_base?.d ||
+    schemaId === "root"
+  ) {
     // Get the schema name and description from meta overlays
-    const metaOverlay = ocaPackage.bundle.overlays?.meta?.find((m) => m.language === language) || 
-                       ocaPackage.bundle.overlays?.meta?.[0];
+    const metaOverlay =
+      ocaPackage.bundle.overlays?.meta?.find((m) => m.language === language) ||
+      ocaPackage.bundle.overlays?.meta?.[0];
     const schemaName = metaOverlay?.name || ocaPackage.bundle?.d || "root";
     const schemaDescription = metaOverlay?.description || "";
-    
+
     return {
       schemaId: ocaPackage.bundle.d || "root",
       schemaName,
       schemaDescription,
       attributes: ocaPackage.bundle.capture_base?.attributes || {},
       overlays: ocaPackage.bundle.overlays || {},
-      labels: ocaPackage.bundle.overlays?.label?.find((l) => l.language === language)?.attribute_labels || {}
+      labels:
+        ocaPackage.bundle.overlays?.label?.find((l) => l.language === language)
+          ?.attribute_labels || {}
     };
   }
 
   // Check if it's the root schema by name (e.g., "sample_questionnaire")
-  const rootMetaOverlay = ocaPackage.bundle.overlays?.meta?.find((m) => m.language === language) || 
-                         ocaPackage.bundle.overlays?.meta?.[0];
+  const rootMetaOverlay =
+    ocaPackage.bundle.overlays?.meta?.find((m) => m.language === language) ||
+    ocaPackage.bundle.overlays?.meta?.[0];
   if (rootMetaOverlay?.name === schemaId) {
     return {
       schemaId: ocaPackage.bundle.d || "root",
@@ -174,36 +174,42 @@ export const getSchemaDataById = (ocaPackage, schemaId, language = "eng") => {
       schemaDescription: rootMetaOverlay.description || "",
       attributes: ocaPackage.bundle.capture_base?.attributes || {},
       overlays: ocaPackage.bundle.overlays || {},
-      labels: ocaPackage.bundle.overlays?.label?.find((l) => l.language === language)?.attribute_labels || {}
+      labels:
+        ocaPackage.bundle.overlays?.label?.find((l) => l.language === language)
+          ?.attribute_labels || {}
     };
   }
 
   // If it's a dependency schema - try to find by digest first
   let dependency = ocaPackage.dependencies?.find((dep) => dep.d === schemaId);
-  
+
   // If not found by digest, try to find by name in meta overlays
   if (!dependency && ocaPackage.dependencies) {
     dependency = ocaPackage.dependencies.find((dep) => {
-      const metaOverlay = dep.overlays?.meta?.find((m) => m.language === language) || 
-                         dep.overlays?.meta?.[0];
+      const metaOverlay =
+        dep.overlays?.meta?.find((m) => m.language === language) ||
+        dep.overlays?.meta?.[0];
       return metaOverlay?.name === schemaId;
     });
   }
 
   if (dependency) {
     // Get the schema name and description from meta overlays
-    const metaOverlay = dependency.overlays?.meta?.find((m) => m.language === language) || 
-                       dependency.overlays?.meta?.[0];
+    const metaOverlay =
+      dependency.overlays?.meta?.find((m) => m.language === language) ||
+      dependency.overlays?.meta?.[0];
     const schemaName = metaOverlay?.name || dependency.d;
     const schemaDescription = metaOverlay?.description || "";
-    
+
     return {
       schemaId: dependency.d,
       schemaName,
       schemaDescription,
       attributes: dependency.capture_base?.attributes || {},
       overlays: dependency.overlays || {},
-      labels: dependency.overlays?.label?.find((l) => l.language === language)?.attribute_labels || {}
+      labels:
+        dependency.overlays?.label?.find((l) => l.language === language)
+          ?.attribute_labels || {}
     };
   }
 
@@ -226,6 +232,40 @@ export const getSchemaDataById = (ocaPackage, schemaId, language = "eng") => {
     const rootAttributes = ocaPackage.bundle.capture_base.attributes;
     for (const [key, value] of Object.entries(rootAttributes)) {
       if (typeof value === "string" && value.startsWith("refn:") && key === schemaId) {
+        // Check if this placeholder schema now has actual attributes in dependencies
+        const dependencyWithAttributes = ocaPackage.dependencies?.find((dep) => {
+          const metaOverlay =
+            dep.overlays?.meta?.find((m) => m.language === language) ||
+            dep.overlays?.meta?.[0];
+          return metaOverlay?.name === schemaId;
+        });
+
+        if (
+          dependencyWithAttributes &&
+          dependencyWithAttributes.capture_base?.attributes
+        ) {
+          // This placeholder schema now has attributes, treat it as a real schema
+          const metaOverlay =
+            dependencyWithAttributes.overlays?.meta?.find(
+              (m) => m.language === language
+            ) || dependencyWithAttributes.overlays?.meta?.[0];
+          const schemaName = metaOverlay?.name || dependencyWithAttributes.d;
+          const schemaDescription = metaOverlay?.description || "";
+
+          return {
+            schemaId: dependencyWithAttributes.d,
+            schemaName,
+            schemaDescription,
+            attributes: dependencyWithAttributes.capture_base.attributes || {},
+            overlays: dependencyWithAttributes.overlays || {},
+            labels:
+              dependencyWithAttributes.overlays?.label?.find(
+                (l) => l.language === language
+              )?.attribute_labels || {}
+          };
+        }
+
+        // Still a placeholder with no attributes
         return {
           schemaId,
           attributes: {}, // Placeholder schemas start with no attributes

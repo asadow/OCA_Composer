@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from "react";
 import "./App.css";
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import StartSchema from "./StartSchema/StartSchema";
 import SchemaMetadata from "./SchemaMetadata/SchemaMetadata";
 import AttributeDetails from "./AttributeDetails/AttributeDetails";
@@ -14,6 +14,7 @@ import Header from "./Header/Header";
 import Footer from "./Footer/Footer";
 import { useMultiSchema } from "./context/MultiSchemaContext";
 import ClickableStepperProgressIndicator from "./StepperProgressIndicator/ClickableStepperProgressIndicator";
+import ErrorPopup from "./ViewSchema/ErrorPopup";
 
 const Home = ({
   currentPage,
@@ -152,9 +153,32 @@ const Home = ({
     setSteps((currentSteps) => currentSteps.filter((step) => step.label !== stepLabel));
   };
 
+  const [showValidationPopup, setShowValidationPopup] = useState(false);
+
+  // Validation function to check if navigation should be allowed
+  const validateNavigation = () => {
+    if (currentPage === "Details") {
+      const currentSchemaState = getSchemaState(activeSchemaId);
+      const hasBlankTypes = currentSchemaState?.attributes?.some(
+        (attr) => !attr?.Type || attr.Type === ""
+      );
+      return !hasBlankTypes;
+    }
+    return true; // Allow navigation for other steps
+  };
+
   const handleStepClick = (index) => {
     const target = steps[index];
     if (target?.page) {
+      // If we're currently on the Details step, validate before allowing navigation
+      if (currentPage === "Details") {
+        if (!validateNavigation()) {
+          // Show validation popup
+          setShowValidationPopup(true);
+          return; // Prevent navigation
+        }
+      }
+
       setCurrentPage(target.page);
     }
   };
@@ -239,6 +263,22 @@ const Home = ({
   return (
     <>
       <Header currentPage={currentPage} />
+
+      {/* Validation Popup for stepper navigation */}
+      {showValidationPopup && (
+        <ErrorPopup onClose={() => setShowValidationPopup(false)}>
+          <Box>
+            <Typography variant="h5" sx={{ mb: 1 }}>
+              Cannot Navigate - Validation Required
+            </Typography>
+            <Typography variant="h6" fontWeight="semibold">
+              There are one or more blank entries in the Type column. Please provide valid
+              data types for all attributes before proceeding.
+            </Typography>
+          </Box>
+        </ErrorPopup>
+      )}
+
       <Box sx={{ flex: 1 }}>
         {/* debug logs removed to prevent noisy renders */}
         {currentPage !== "Start" && currentPage !== "Create" && (

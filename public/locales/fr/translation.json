@@ -112,6 +112,8 @@
   "Help with this page": "Aide avec cette page",
   "Schema Metadata": "Métadonnées du schéma",
   "Attribute Details": "Détails de l'attribut",
+  "Attribute Details for": "Détails de l'attribut pour",
+  "(placeholder)": "(espace réservé)",
   "This page is where you can write the metadata describing...": "Cette page est l'endroit où vous pouvez écrire les métadonnées décrivant le schéma que vous écrivez. Les métadonnées aident les utilisateurs à trouver, comprendre et utiliser votre schéma. Si vous nommez et décrivez vos descriptions de schéma en termes généraux, il sera plus facile pour vous et d'autres de réutiliser le schéma pour différents ensembles de données. Cela contribuera à garantir que vos données sont plus interopérables.",
   "Each column of your dataset is an attribute in your schema...": "Chaque colonne de votre ensemble de données est un attribut de votre schéma. Ici, vous pouvez ajouter plus de détails sur chaque attribut pour aider les gens à comprendre et à utiliser votre ensemble de données.",
   "Add Entry Codes": "Ajouter des codes d'entrée",

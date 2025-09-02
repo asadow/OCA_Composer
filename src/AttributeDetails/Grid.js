@@ -28,6 +28,15 @@ const gridStyle = `
   .ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
     height: 100%;
   }
+  .ag-theme-balham.ag-grid-compact {
+    height: auto !important;
+  }
+  .ag-theme-balham.ag-grid-compact .ag-root-wrapper {
+    height: auto !important;
+  }
+  .ag-theme-balham.ag-grid-compact .ag-center-cols-clipper {
+    min-height: unset !important;
+  }
   `;
 
 // Renderers define input cells, Headers define grid header cells
@@ -580,7 +589,10 @@ export default function Grid({
 
   return (
     <div style={{ margin: "2rem" }}>
-      <div className="ag-theme-balham" style={{ width: 752 }}>
+      <div
+        className={`ag-theme-balham ${attributeRowData.length > 0 ? "ag-grid-compact" : ""}`}
+        style={{ width: 752 }}
+      >
         <style>{gridStyle}</style>
         <AgGridReact
           ref={gridRef}
@@ -591,6 +603,7 @@ export default function Grid({
           suppressRowClickSelection
           suppressCellSelection={false}
           domLayout="autoHeight"
+          suppressRowHoverHighlight
           onCellKeyDown={onCellKeyDown}
           animateRows
           onRowDragEnd={(e) => onRowDragEnd(e)}

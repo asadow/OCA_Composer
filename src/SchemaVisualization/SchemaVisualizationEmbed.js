@@ -147,16 +147,31 @@ const SchemaVisualizationEmbed = ({
   const generateLayout = useCallback(() => {
     const ocaPackage = getOCAPackage();
     if (!ocaPackage) {
+      console.log("SchemaVisualizationEmbed: generateLayout - No OCA package available");
       return;
     }
+    console.log("SchemaVisualizationEmbed: generateLayout - Processing package:", {
+      dependencies: ocaPackage.dependencies?.length || 0,
+      dependencyIds: ocaPackage.dependencies?.map((d) => d.d) || [],
+      rootAttributes: Object.keys(ocaPackage.bundle?.capture_base?.attributes || {})
+    });
+
     const languageCode = toThreeLetterCode(i18n.language.split("-")[0]) || "eng";
     const processedSchemaData = extractSchemaDataFromPackage(ocaPackage, languageCode);
     if (!processedSchemaData) {
+      console.log(
+        "SchemaVisualizationEmbed: generateLayout - Failed to extract schema data"
+      );
       return;
     }
+    console.log("SchemaVisualizationEmbed: generateLayout - Extracted data:", {
+      attributes: Object.keys(processedSchemaData.attributes || {}),
+      dependencies: processedSchemaData.dependencies?.length || 0
+    });
     let result;
     try {
-      let schemaName = t("Parent Schema");
+      // Get the schema name - prioritize the actual schema name over generic "Parent Schema"
+      let schemaName = "Root Schema"; // Default fallback
       if (
         processedSchemaData.overlays?.meta &&
         Array.isArray(processedSchemaData.overlays.meta)
@@ -166,6 +181,12 @@ const SchemaVisualizationEmbed = ({
         );
         if (metaOverlay?.name) {
           schemaName = metaOverlay.name;
+        } else {
+          // If no localized name, try to get any name from meta overlays
+          const anyMetaOverlay = processedSchemaData.overlays.meta[0];
+          if (anyMetaOverlay?.name) {
+            schemaName = anyMetaOverlay.name;
+          }
         }
       }
       if (internalViewMode === "tree") {
@@ -250,6 +271,13 @@ const SchemaVisualizationEmbed = ({
   // Generate layout on component mount and when dependencies change
   useEffect(() => {
     const ocaPackage = getOCAPackage();
+    console.log("SchemaVisualizationEmbed: useEffect triggered, OCAPackage:", {
+      hasPackage: !!ocaPackage,
+      dependenciesCount: ocaPackage?.dependencies?.length || 0,
+      dependencyIds: ocaPackage?.dependencies?.map((d) => d.d) || [],
+      rootAttributes: Object.keys(ocaPackage?.bundle?.capture_base?.attributes || {})
+    });
+
     if (ocaPackage && ocaPackage.dependencies && ocaPackage.dependencies.length > 0) {
       generateLayout();
 
@@ -307,7 +335,7 @@ const SchemaVisualizationEmbed = ({
         }
       }, 150);
     }
-  }, [getOCAPackage, generateLayout]);
+  }, [getOCAPackage, generateLayout, OCAPackage]);
 
   return (
     <Box

@@ -73,6 +73,9 @@ const AccordionList = () => {
   };
 
   const navigateToViewPage = () => {
+    // Always go to the View step in the editor instead of separate page
+    // Keep the separate page code commented out in case we change our mind later
+    /*
     // Navigate to visualization if we have any file uploaded
     if (rawFile && rawFile.length > 0) {
       // Pass the file object so the visualization page can read it
@@ -82,6 +85,12 @@ const AccordionList = () => {
       setCurrentPage("View");
       navigate("/start");
     }
+    */
+
+    // Go directly to View step in editor
+    setIsZip(true);
+    setCurrentPage("View");
+    navigate("/start");
   };
 
   const navigateToPreviewSchema = () => {

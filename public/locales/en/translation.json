@@ -113,6 +113,8 @@
   "Help with this page": "Help with this page",
   "Schema Metadata": "Schema Metadata",
   "Attribute Details": "Attribute Details",
+  "Attribute Details for": "Attribute Details for",
+  "(placeholder)": "(placeholder)",
   "This page is where you can write the metadata describing...": "This page is where you can write the metadata describing the schema you are writing. Metadata helps people find, understand, and use your schema. If you name and describe your schema descriptions in general terms, it will be easier for you and others to reuse the schema for different datasets. This will help with ensuring your data is more interoperable.",
   "Each column of your dataset is an attribute in your schema...": "Each column of your dataset is an attribute in your schema. Here you can add more details about each attribute to help people understand and use your dataset.",
   "Add Entry Codes": "Add Entry Codes",

@@ -10,12 +10,12 @@ const TypeRenderer = ({ data, attributeRowData, typesObjectRef, dropRefs, setAtt
   
   const displayValues = [
     { value: "", label: "" },
+    { value: "Text", label: "Text" },
     { value: "Binary", label: "Binaryfile" },
     { value: "Boolean", label: "Boolean" },
     { value: "DateTime", label: "DateTime" },
     { value: "Numeric", label: "Numeric" },
     { value: "Child Schema", label: "Child Schema" },
-    { value: "Text", label: "Text" },
     { value: "Array[Binary]", label: "Array[Binaryfile]" },
     { value: "Array[Boolean]", label: "Array[Boolean]" },
     { value: "Array[DateTime]", label: "Array[DateTime]" },
@@ -31,7 +31,7 @@ const TypeRenderer = ({ data, attributeRowData, typesObjectRef, dropRefs, setAtt
 
   const index = attributeRowData.findIndex((item) => item.Attribute === attributeName);
   const [type, setType] = useState(
-    (currentAttribute && currentAttribute.Type) || displayValues[0].value
+    (currentAttribute && currentAttribute.Type) || ""
   );
 
   const typesDisplay = displayValues.map((value) => (

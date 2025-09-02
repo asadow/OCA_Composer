@@ -67,6 +67,7 @@ const UseASchemaAccordionItem = ({ isInvalidOcaPackage }) => {
   };
 
   const navigateToViewPage = () => {
+    // Go directly to the View step in the editor instead of separate page
     setCurrentPage("View");
     navigate("/start");
   };

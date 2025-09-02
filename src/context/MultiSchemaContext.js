@@ -69,9 +69,8 @@ export const MultiSchemaProvider = ({ children }) => {
   const [schemaNavigationHistory, setSchemaNavigationHistory] = useState([]);
   const [modifiedSchemas, setModifiedSchemas] = useState(new Set());
   const [currentPackageId, setCurrentPackageId] = useState(null);
-  
-  // Step management callback
 
+  // Step management callback
 
   // Refs for persistence
   const saveTimerRef = useRef(null);
@@ -479,48 +478,99 @@ export const MultiSchemaProvider = ({ children }) => {
           targetSchema = modifiedPackage.dependencies?.find((dep) => dep.d === schemaId);
         }
 
-        if (!targetSchema) return;
+        // If targetSchema is not found, it might be a placeholder schema that needs to be created
+        if (!targetSchema) {
+          // Check if this is a placeholder schema by looking at the root schema's attributes
+          const rootAttributes = modifiedPackage.bundle?.capture_base?.attributes || {};
+          const isPlaceholder = Object.entries(rootAttributes).some(
+            ([key, value]) =>
+              key === schemaId && typeof value === "string" && value.startsWith("refn:")
+          );
 
-        // Apply attribute changes - preserve original reference values
+          if (isPlaceholder) {
+            // Create a new dependency schema for this placeholder
+            const newDependency = {
+              d: schemaId,
+              capture_base: {
+                d: `placeholder_${schemaId}_${Date.now()}`,
+                type: "spec/capture_base/1.1",
+                attributes: {},
+                classification: "RDF508",
+                flagged_attributes: []
+              },
+              overlays: {
+                meta: [
+                  {
+                    d: `meta_${schemaId}_${Date.now()}`,
+                    capture_base: `placeholder_${schemaId}_${Date.now()}`,
+                    type: "spec/overlays/meta/1.1",
+                    language: "eng",
+                    name: schemaId,
+                    description: ""
+                  }
+                ]
+              }
+            };
+
+            // Add the new dependency to the package
+            if (!modifiedPackage.dependencies) {
+              modifiedPackage.dependencies = [];
+            }
+            modifiedPackage.dependencies.push(newDependency);
+            targetSchema = newDependency;
+          } else {
+            // Not a placeholder schema, skip
+            return;
+          }
+        }
+
+        // Apply attribute changes - rebuild attributes map to reflect additions/removals
         if (schemaState.attributes && schemaState.attributes.length > 0) {
-          // Start with original attributes to preserve reference values
           const originalAttributes = targetSchema.capture_base.attributes || {};
-          const newAttributes = { ...originalAttributes };
+          const rebuiltAttributes = {};
 
           schemaState.attributes.forEach((attr) => {
-            if (attr.Attribute && attr.Type) {
-              // If this is a "Child Schema" display type, we need to preserve the original reference
-              if (attr.Type === "Child Schema") {
-                // Keep the original reference value if it exists
-                if (!originalAttributes[attr.Attribute]) {
-                  // If it's a new attribute with "Child Schema" type, we need to generate a reference
-                  // For now, let's use a placeholder reference
-                  newAttributes[attr.Attribute] = `refn:placeholder_${attr.Attribute}`;
-                }
-                // Otherwise, keep the existing reference value
-              } else {
-                // For non-reference types, store the actual type
-                newAttributes[attr.Attribute] = attr.Type;
-              }
+            if (!attr || !attr.Attribute) return;
+            const name = attr.Attribute;
+            const type = attr.Type;
+            if (type === "Child Schema") {
+              // Preserve original reference value if present; otherwise create a placeholder ref
+              rebuiltAttributes[name] =
+                originalAttributes[name] || `refn:placeholder_${name}`;
+            } else {
+              rebuiltAttributes[name] = type || "Text";
             }
           });
 
-          targetSchema.capture_base.attributes = newAttributes;
+          targetSchema.capture_base.attributes = rebuiltAttributes;
         }
 
         // Apply overlay changes - preserve original overlay structure
+        if (!targetSchema.overlays) targetSchema.overlays = {};
         if (schemaState.overlays) {
-          // Ensure overlays object exists
-          if (!targetSchema.overlays) {
-            targetSchema.overlays = {};
-          }
-
-          // Merge overlay changes while preserving original structure
           Object.entries(schemaState.overlays).forEach(([overlayType, overlayData]) => {
-            if (overlayData) {
-              targetSchema.overlays[overlayType] = overlayData;
-            }
+            if (overlayData) targetSchema.overlays[overlayType] = overlayData;
           });
+        }
+
+        // Rebuild meta overlays from localized metadata if present
+        const locMeta = schemaState.metadata?.localized || {};
+        const existingMeta = Array.isArray(targetSchema.overlays?.meta)
+          ? targetSchema.overlays.meta
+          : [];
+        const metaArray = Object.entries(locMeta).map(([lang, obj]) => {
+          const existingForLang = existingMeta.find((m) => m?.language === lang) || {};
+          return {
+            d: existingForLang.d || `meta_${Date.now()}_${lang}`,
+            capture_base: targetSchema.capture_base?.d,
+            type: "spec/overlays/meta/1.1",
+            language: lang,
+            name: obj?.name || "",
+            description: obj?.description || ""
+          };
+        });
+        if (metaArray.length > 0) {
+          targetSchema.overlays.meta = metaArray;
         }
 
         // Apply entry codes

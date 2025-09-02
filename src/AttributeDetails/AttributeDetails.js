@@ -16,11 +16,7 @@ import { FIELD_RANGE_OVERLAY } from "../constants/constants";
 import ErrorPopup from "../ViewSchema/ErrorPopup";
 import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 
-export default function AttributeDetails({
-  pageBack,
-  pageForward,
-  removeStep
-}) {
+export default function AttributeDetails({ pageBack, pageForward, removeStep }) {
   const { t } = useTranslation();
   const {
     setAttributesWithLists,
@@ -67,6 +63,34 @@ export default function AttributeDetails({
     typesObjectRef.current = newTypesObjetRef;
   }, [attributeRowData]);
 
+  // Ensure overlay state has all required keys
+  useEffect(() => {
+    if (editingSchemaId && overlay) {
+      // Ensure all required overlay keys are present
+      const requiredOverlayKeys = [
+        FIELD_RANGE_OVERLAY,
+        "Unit Framing",
+        "Attribute Framing",
+        "Character Encoding",
+        "Format Rules",
+        "Cardinality",
+        "Data Standards",
+        "Make selected entries required"
+      ];
+
+      const missingKeys = requiredOverlayKeys.filter((key) => !overlay[key]);
+      if (missingKeys.length > 0) {
+        setOverlay((prev) => {
+          const updated = { ...prev };
+          missingKeys.forEach((key) => {
+            updated[key] = { feature: key, selected: false };
+          });
+          return updated;
+        });
+      }
+    }
+  }, [editingSchemaId, overlay, setOverlay]);
+
   // Initialize data when switching to edit a schema
   useEffect(() => {
     if (editingSchemaId && initializedSchemaRef.current !== editingSchemaId) {
@@ -92,15 +116,14 @@ export default function AttributeDetails({
               // Check if this attribute has entry codes (is a list)
               const hasEntryCodes =
                 (schemaData.overlays?.entry &&
-                schemaData.overlays.entry.some(
-                  (entryOverlay) =>
-                    entryOverlay.attribute_entries && entryOverlay.attribute_entries[key]
-                )) ||
+                  schemaData.overlays.entry.some(
+                    (entryOverlay) =>
+                      entryOverlay.attribute_entries &&
+                      entryOverlay.attribute_entries[key]
+                  )) ||
                 (schemaData.overlays?.entry_code &&
-                schemaData.overlays.entry_code.attribute_entry_codes &&
-                schemaData.overlays.entry_code.attribute_entry_codes[key]);
-              
-
+                  schemaData.overlays.entry_code.attribute_entry_codes &&
+                  schemaData.overlays.entry_code.attribute_entry_codes[key]);
 
               // Handle schema references (refs/refn) - these should be "Child Schema" not a type
               let displayType = value;
@@ -206,7 +229,7 @@ export default function AttributeDetails({
 
   // Update canDelete when attributeRowData changes
   useEffect(() => {
-    setCanDelete(attributeRowData.length !== 1);
+    setCanDelete(attributeRowData.length > 0);
   }, [attributeRowData.length]);
 
   // Stops grid editing when clicking outside grid
@@ -311,7 +334,7 @@ export default function AttributeDetails({
       const noSpacesArray = removeSpacesFromArrayOfObjects(newAttributeRowData);
       setAttributeRowData(noSpacesArray);
 
-      if (overlay[FIELD_RANGE_OVERLAY].selected) {
+      if (overlay[FIELD_RANGE_OVERLAY]?.selected) {
         const hasValidAttribute = noSpacesArray.some(
           (attribute) => attribute.Type === "Numeric" || attribute.Type === "DateTime"
         );
@@ -319,7 +342,10 @@ export default function AttributeDetails({
         if (!hasValidAttribute) {
           setOverlay((prev) => ({
             ...prev,
-            [FIELD_RANGE_OVERLAY]: { ...prev[FIELD_RANGE_OVERLAY], selected: false }
+            [FIELD_RANGE_OVERLAY]: {
+              ...(prev[FIELD_RANGE_OVERLAY] || {}),
+              selected: false
+            }
           }));
         }
       }
