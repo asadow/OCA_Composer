@@ -1,6 +1,6 @@
 import { Box, Button, Alert } from "@mui/material";
 import React, { useContext, useState } from "react";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import { Context } from "../App";
 import { removeSpacesFromString } from "../constants/removeSpaces";
 import { allLanguagesWithCodesArray } from "../constants/isoCodes";
@@ -82,8 +82,8 @@ export default function LanguageSelection({
 
     // quotes at start or end of language name can create export errors
     if (
-      languageToAdd.startsWith("\"") ||
-      languageToAdd.endsWith("\"") ||
+      languageToAdd.startsWith('"') ||
+      languageToAdd.endsWith('"') ||
       languageToAdd.startsWith("'") ||
       languageToAdd.endsWith("'") ||
       languageToAdd.startsWith("`") ||

@@ -4,7 +4,7 @@ import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { useTranslation } from "react-i18next";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import { Context } from "../App";
 import { languageCodesObject } from "../constants/isoCodes";
 import Classification from "./Classification";
@@ -31,12 +31,15 @@ export default function SchemaInput({
   const descriptionFieldId = `schema-description${language}`;
 
   // Get the schema data for the currently editing schema
-  const currentSchemaData = editingSchemaId ? getSchemaDataById(OCAPackage, editingSchemaId) : null;
-  
+  const currentSchemaData = editingSchemaId
+    ? getSchemaDataById(OCAPackage, editingSchemaId)
+    : null;
+
   // If we're editing a specific schema, use the schema name and description from the data
-  const schemaName = currentSchemaData?.schemaName || currentSchemaData?.fieldName || editingSchemaId;
+  const schemaName =
+    currentSchemaData?.schemaName || currentSchemaData?.fieldName || editingSchemaId;
   const currentSchemaDescription = currentSchemaData?.schemaDescription || "";
-  
+
   // Debug logs removed to reduce console noise during schema-aware editing
 
   const handleNameField = (e) => {
@@ -46,10 +49,10 @@ export default function SchemaInput({
     const newText = e.target.value;
     newSchema = {
       ...newSchema,
-      [language]: { ...newSchema[language], name: newText },
+      [language]: { ...newSchema[language], name: newText }
     };
     setSchemaDescription(newSchema);
-    
+
     // If we're editing a specific schema, update the schema name in the OCA package
     if (editingSchemaId && currentSchemaData) {
       // This will be handled by the export logic when the user saves
@@ -64,7 +67,7 @@ export default function SchemaInput({
     const newText = e.target.value;
     newSchema = {
       ...newSchema,
-      [language]: { ...newSchema[language], description: newText },
+      [language]: { ...newSchema[language], description: newText }
     };
     setSchemaDescription(newSchema);
   };
@@ -86,17 +89,19 @@ export default function SchemaInput({
           display: "flex",
           flexDirection: "column",
           mt: 1,
-          height: "10.5rem",
+          height: "10.5rem"
         }}
       >
-        {index === 0 ? <Classification /> : (
+        {index === 0 ? (
+          <Classification />
+        ) : (
           <Box sx={{ marginBottom: "1rem", height: "5rem" }} />
         )}
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "flex-start",
+            alignItems: "flex-start"
           }}
         >
           <Typography
@@ -106,7 +111,7 @@ export default function SchemaInput({
               textAlign: "left",
               textTransform: "capitalize",
               maxWidth: "20rem",
-              wordBreak: "break-word",
+              wordBreak: "break-word"
             }}
           >
             {language}
@@ -123,7 +128,7 @@ export default function SchemaInput({
                     pr: 1,
                     color: CustomPalette.PRIMARY,
                     transform: "scale(1.2)",
-                    transition: "all 0.2s ease-in-out",
+                    transition: "all 0.2s ease-in-out"
                   }}
                 />
               ) : (
@@ -131,7 +136,7 @@ export default function SchemaInput({
                   sx={{
                     pr: 1,
                     color: CustomPalette.GREY_600,
-                    transition: "all 0.2s ease-in-out",
+                    transition: "all 0.2s ease-in-out"
                   }}
                 />
               )}
@@ -142,8 +147,7 @@ export default function SchemaInput({
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-
+            justifyContent: "space-between"
           }}
         >
           <Box>
@@ -174,7 +178,7 @@ export default function SchemaInput({
           sx={{
             display: "flex",
             alignItems: "center",
-            color: CustomPalette.GREY_600,
+            color: CustomPalette.GREY_600
           }}
         >
           <Typography
@@ -184,14 +188,16 @@ export default function SchemaInput({
               textAlign: "left",
               margin: "0.5rem 0 0.5rem 0",
               width: "8rem",
-              color: CustomPalette.BLACK,
+              color: CustomPalette.BLACK
             }}
           >
             {t("Name of Schema")}
           </Typography>
           {language === languages[0] && (
             <Tooltip
-              title={t("The name of the schema. It is recommended to use a more general...")}
+              title={t(
+                "The name of the schema. It is recommended to use a more general..."
+              )}
               placement="right"
               arrow
             >
@@ -205,8 +211,8 @@ export default function SchemaInput({
           onChange={handleNameField}
           inputProps={{
             style: {
-              height: "0.2rem",
-            },
+              height: "0.2rem"
+            }
           }}
           value={
             editingSchemaId
@@ -219,7 +225,7 @@ export default function SchemaInput({
             display: "flex",
             alignItems: "center",
             margin: "2rem 0 0.5rem 0",
-            color: CustomPalette.GREY_600,
+            color: CustomPalette.GREY_600
           }}
         >
           <Typography
@@ -228,7 +234,7 @@ export default function SchemaInput({
               fontWeight: "bold",
               textAlign: "left",
               color: CustomPalette.BLACK,
-              width: "6rem",
+              width: "6rem"
             }}
           >
             {t("Description")}
@@ -243,19 +249,18 @@ export default function SchemaInput({
             </Tooltip>
           )}
         </Box>
-                 <TextField
-           multiline
-           rows="5"
-           id={descriptionFieldId}
-           type="text"
-           onChange={handleDescriptionField}
-           value={
-             editingSchemaId
-               ? currentSchemaDescription
-               : schemaDescription[language] &&
-                 schemaDescription[language].description
-           }
-         />
+        <TextField
+          multiline
+          rows="5"
+          id={descriptionFieldId}
+          type="text"
+          onChange={handleDescriptionField}
+          value={
+            editingSchemaId
+              ? currentSchemaDescription
+              : schemaDescription[language] && schemaDescription[language].description
+          }
+        />
       </Box>
     </Box>
   );

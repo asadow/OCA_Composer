@@ -1,5 +1,26 @@
-import React, { useContext, useState, useEffect, useCallback, useMemo, useRef, memo, forwardRef } from "react";
-import { Box, Divider, TextField, Typography, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, Tooltip } from "@mui/material"; // Import necessary components for the dialog/pop-up
+import React, {
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  memo,
+  forwardRef
+} from "react";
+import {
+  Box,
+  Divider,
+  TextField,
+  Typography,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Tooltip
+} from "@mui/material"; // Import necessary components for the dialog/pop-up
 import { AgGridReact } from "ag-grid-react";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -16,26 +37,28 @@ import CellHeader from "../components/CellHeader";
 import "../App.css";
 
 const gridOptions = {
-  domLayout: "autoHeight",
+  domLayout: "autoHeight"
 };
 
 const TrashCanButton = memo(
-  forwardRef((props, ref) => (
-      <>
-        {props.node.data?.Type.includes("Array") &&
-          <IconButton
-            sx={{
-              pr: 1,
-              color: CustomPalette.GREY_600,
-              transition: "all 0.2s ease-in-out",
-            }}
-            disabled={props.node.data?.EntryLimit === ""}
-            onClick={() => props?.handleDeleteRow()}
-          >
-            <DeleteOutlineIcon />
-          </IconButton>
-        }</>
-    )));
+  forwardRef((props) => (
+    <div>
+      {props.node.data?.Type.includes("Array") && (
+        <IconButton
+          sx={{
+            pr: 1,
+            color: CustomPalette.GREY_600,
+            transition: "all 0.2s ease-in-out"
+          }}
+          disabled={props.node.data?.EntryLimit === ""}
+          onClick={() => props?.handleDeleteRow()}
+        >
+          <DeleteOutlineIcon />
+        </IconButton>
+      )}
+    </div>
+  ))
+);
 
 const Cardinality = () => {
   const { t } = useTranslation();
@@ -60,7 +83,9 @@ const Cardinality = () => {
 
   const handleSave = useCallback(() => {
     cardinalityRef.current.api.stopEditing();
-    const newCardinalityData = cardinalityRef.current.api.getRenderedNodes()?.map((node) => node?.data);
+    const newCardinalityData = cardinalityRef.current.api
+      .getRenderedNodes()
+      ?.map((node) => node?.data);
     setCardinalityData(newCardinalityData);
   }, [setCardinalityData]);
 
@@ -75,7 +100,11 @@ const Cardinality = () => {
       const entryLimit = params?.data.EntryLimit;
       const selectedDataToSave = { ...params?.data, rowIndex: params?.rowIndex };
 
-      if (entryLimit !== null && entryLimit !== undefined && params.colDef.field !== "Delete") {
+      if (
+        entryLimit !== null &&
+        entryLimit !== undefined &&
+        params.colDef.field !== "Delete"
+      ) {
         if (entryLimit.includes("-")) {
           const [MIN, MAX] = entryLimit.split("-").map((value) => value.trim());
           setSelectedCellData(selectedDataToSave);
@@ -103,7 +132,7 @@ const Cardinality = () => {
     setSelectedCellData({ ...params?.data, rowIndex: params?.rowIndex });
     params.node.updateData({
       ...params.node.data,
-      EntryLimit: "",
+      EntryLimit: ""
     });
     cardinalityRef.current.api.redrawRows({ rowNodes: [params.node] });
     setExactValue("");
@@ -136,7 +165,11 @@ const Cardinality = () => {
   const handleApplyValues = useCallback(() => {
     if (selectedCellData) {
       try {
-        if (minValue !== "" && maxValue !== "" && parseFloat(minValue) >= parseFloat(maxValue)) {
+        if (
+          minValue !== "" &&
+          maxValue !== "" &&
+          parseFloat(minValue) >= parseFloat(maxValue)
+        ) {
           setDialogMessage(t("The minimum value must be less than the maximum value"));
           setOpenDialog(true);
           return;
@@ -148,20 +181,28 @@ const Cardinality = () => {
           return;
         }
 
-        if (isNotInteger(exactValue) === false || isNotInteger(minValue) === false || isNotInteger(maxValue) === false) {
+        if (
+          isNotInteger(exactValue) === false ||
+          isNotInteger(minValue) === false ||
+          isNotInteger(maxValue) === false
+        ) {
           setDialogMessage(t("All entries must be positive integers"));
           setOpenDialog(true);
           return;
         }
-
       } catch (error) {
         setDialogMessage(t("All entries must be valid integers"));
         setOpenDialog(true);
         return;
       }
 
-      const getRowToUpdate = cardinalityRef.current.api.getRowNode(selectedCellData.rowIndex);
-      getRowToUpdate.setData({ ...selectedCellData, EntryLimit: exactValue || `${minValue}-${maxValue}` });
+      const getRowToUpdate = cardinalityRef.current.api.getRowNode(
+        selectedCellData.rowIndex
+      );
+      getRowToUpdate.setData({
+        ...selectedCellData,
+        EntryLimit: exactValue || `${minValue}-${maxValue}`
+      });
       if (minValue !== "" && maxValue !== "") {
         setExactValue("");
       } else if (minValue === "" && maxValue === "" && exactValue === "") {
@@ -173,58 +214,77 @@ const Cardinality = () => {
     }
   }, [exactValue, isNotInteger, maxValue, minValue, selectedCellData, t]);
 
-
-
   const onGridReady = useCallback(() => {
     setLoading(false);
   }, []);
 
-  const columnDefs = useMemo(() => [
-    {
-      field: "Attribute",
-      width: 160,
-      autoHeight: true,
-      cellStyle: () => preWrapWordBreak,
-      headerComponent: () => <CellHeader headerText={t("Attributes")} helpText={t("This is the name for the attribute and, for example...")} />,
-    },
-    {
-      field: "Label",
-      width: 200,
-      autoHeight: true,
-      cellStyle: () => preWrapWordBreak,
-      headerComponent: () => <CellHeader headerText={t("Label")} helpText={t("This is the language specific label for an attribute")} />,
-    },
-    {
-      headerName: t("Entry Limit"),
-      field: "EntryLimit",
-      width: 140,
-      autoHeight: true,
-      headerComponent: () => <CellHeader headerText={t("Entry Limit")} helpText={t("Applies only to array DatatTypes. Describes the number of occurrences of an element")} />,
-    },
-    {
-      headerName: "Garbage",
-      field: "Delete",
-      cellRendererFramework: TrashCanButton,
-      cellRendererParams: (params) => ({
-        handleDeleteRow: () => handleDeleteRow(params)
-      }),
-      width: 100,
-      headerComponent: () => <CellHeader headerText={t("Garbage")} helpText={t("Remove the Entry Limit rule")} />,
-    },
-  ], [handleCellClick, handleDeleteRow, t]);
+  const columnDefs = useMemo(
+    () => [
+      {
+        field: "Attribute",
+        width: 160,
+        autoHeight: true,
+        cellStyle: () => preWrapWordBreak,
+        headerComponent: CellHeader,
+        headerComponentParams: {
+          headerText: t("Attributes"),
+          helpText: t("This is the name for the attribute and, for example...")
+        }
+      },
+      {
+        field: "Label",
+        width: 200,
+        autoHeight: true,
+        cellStyle: () => preWrapWordBreak,
+        headerComponent: CellHeader,
+        headerComponentParams: {
+          headerText: t("Label"),
+          helpText: t("This is the language specific label for an attribute")
+        }
+      },
+      {
+        headerName: t("Entry Limit"),
+        field: "EntryLimit",
+        width: 140,
+        autoHeight: true,
+        headerComponent: CellHeader,
+        headerComponentParams: {
+          headerText: t("Entry Limit"),
+          helpText: t(
+            "Applies only to array DatatTypes. Describes the number of occurrences of an element"
+          )
+        }
+      },
+      {
+        headerName: "Garbage",
+        field: "Delete",
+        cellRendererFramework: TrashCanButton,
+        cellRendererParams: (params) => ({
+          handleDeleteRow: () => handleDeleteRow(params)
+        }),
+        width: 100,
+        headerComponent: CellHeader,
+        headerComponentParams: {
+          headerText: t("Garbage"),
+          helpText: t("Remove the Entry Limit rule")
+        }
+      }
+    ],
+    [handleDeleteRow, t]
+  );
 
   const handleDeleteCurrentOverlay = () => {
     setOverlay((prev) => ({
       ...prev,
-      "Cardinality": {
+      Cardinality: {
         ...prev.Cardinality,
-        selected: false,
-      },
+        selected: false
+      }
     }));
 
     const newCardinalityData = cardinalityData.map((row) => ({
       ...row,
-      EntryLimit: "",
+      EntryLimit: ""
     }));
 
     setCardinalityData(newCardinalityData);
@@ -243,28 +303,44 @@ const Cardinality = () => {
     const firstLanguage = Object.keys(lanAttributeRowData)?.[0];
     const cardinalityDataCopy = [];
 
-    for (const item of lanAttributeRowData?.[firstLanguage]) {
+    for (const item of lanAttributeRowData?.[firstLanguage] || []) {
       const entity = cardinalityData?.find((row) => row.Attribute === item.Attribute);
-      const typeAttribute = attributeRowData?.find((row) => row.Attribute === item.Attribute);
+      const typeAttribute = attributeRowData?.find(
+        (row) => row.Attribute === item.Attribute
+      );
       cardinalityDataCopy.push({
         Attribute: item?.Attribute,
         Label: item?.Label,
-        EntryLimit: entity && entity?.Type === typeAttribute?.Type && entity?.Attribute === typeAttribute?.Attribute ? entity.EntryLimit : "",
-        Type: typeAttribute?.Type,
+        EntryLimit:
+          entity &&
+          entity?.Type === typeAttribute?.Type &&
+          entity?.Attribute === typeAttribute?.Attribute
+            ? entity.EntryLimit
+            : "",
+        Type: typeAttribute?.Type
       });
     }
 
     setCardinalityData(cardinalityDataCopy);
   }, [lanAttributeRowData, attributeRowData]);
 
-  const rowClassRules = useMemo(() => ({
-      "rag-grey-outer": function(params) {
+  const rowClassRules = useMemo(
+    () => ({
+      "rag-grey-outer": function (params) {
         return !params.data.Type.includes("Array");
-      },
-    }), []);;
+      }
+    }),
+    []
+  );
 
   return (
-    <BackNextSkeleton isForward pageForward={handleForward} isBack pageBack={() => setShowDeleteConfirmation(true)} backText="Remove overlay">
+    <BackNextSkeleton
+      isForward
+      pageForward={handleForward}
+      isBack
+      pageBack={() => setShowDeleteConfirmation(true)}
+      backText="Remove overlay"
+    >
       {loading && cardinalityData?.length > 40 && <Loading />}
       {showDeleteConfirmation && (
         <DeleteConfirmation
@@ -282,13 +358,28 @@ const Cardinality = () => {
           width: "100%"
         }}
       >
-        <Box className="ag-theme-balham" sx={{ width: "50%", height: "100%", maxWidth: "600px" }}>
-          <Typography sx={{
-            textAlign: "start",
-            marginBottom: "14px",
-          }}>{t("Entry limits can only be created for attributes with an array DataType")}</Typography>
+        <Box
+          className="ag-theme-balham"
+          sx={{ width: "50%", height: "100%", maxWidth: "600px" }}
+        >
+          <Typography
+            sx={{
+              textAlign: "start",
+              marginBottom: "14px"
+            }}
+          >
+            {t("Entry limits can only be created for attributes with an array DataType")}
+          </Typography>
           <style>{gridStyles}</style>
-          <AgGridReact ref={cardinalityRef} rowClassRules={rowClassRules} onCellClicked={handleCellClick} rowData={cardinalityData} columnDefs={columnDefs} gridOptions={gridOptions} onGridReady={onGridReady} />
+          <AgGridReact
+            ref={cardinalityRef}
+            rowClassRules={rowClassRules}
+            onCellClicked={handleCellClick}
+            rowData={cardinalityData}
+            columnDefs={columnDefs}
+            gridOptions={gridOptions}
+            onGridReady={onGridReady}
+          />
         </Box>
         <Divider orientation="vertical" flexItem />
         <Box
@@ -301,13 +392,12 @@ const Cardinality = () => {
             padding: "10px",
             position: "sticky",
             top: "2rem",
-            alignSelf: "flex-start",
+            alignSelf: "flex-start"
           }}
         >
           {selectedCellData && (
             <>
               <Box>
-
                 <TextField
                   label={t("Exact")}
                   variant="outlined"
@@ -315,16 +405,25 @@ const Cardinality = () => {
                   onChange={(e) => handleValueChange(e.target.value, "exact")}
                   style={{
                     marginBottom: "10px",
-                    backgroundColor: minValue || maxValue ? "#f2f2f2" : "white",
+                    backgroundColor: minValue || maxValue ? "#f2f2f2" : "white"
                   }}
                   disabled={minValue || maxValue}
                 />
                 <Tooltip
-                  title={t("For each attribute you can specify the exact, minimum or maximum ...")}
+                  title={t(
+                    "For each attribute you can specify the exact, minimum or maximum ..."
+                  )}
                   placement="top"
                   arrow
                 >
-                  <HelpOutlineIcon sx={{ fontSize: 18, color: "#ccc", marginLeft: "10px", marginTop: "5px" }} />
+                  <HelpOutlineIcon
+                    sx={{
+                      fontSize: 18,
+                      color: "#ccc",
+                      marginLeft: "10px",
+                      marginTop: "5px"
+                    }}
+                  />
                 </Tooltip>
               </Box>
               <Typography variant="h6" align="center" style={{ marginBottom: "10px" }}>
@@ -338,7 +437,7 @@ const Cardinality = () => {
                   value={minValue}
                   onChange={(e) => handleValueChange(e.target.value, "min")}
                   style={{
-                    backgroundColor: exactValue ? "#f2f2f2" : "white",
+                    backgroundColor: exactValue ? "#f2f2f2" : "white"
                   }}
                   disabled={exactValue}
                 />
@@ -349,26 +448,28 @@ const Cardinality = () => {
                   value={maxValue}
                   onChange={(e) => handleValueChange(e.target.value, "max")}
                   style={{
-                    backgroundColor: exactValue ? "#f2f2f2" : "white",
+                    backgroundColor: exactValue ? "#f2f2f2" : "white"
                   }}
                   disabled={exactValue}
                 />
               </Box>
               <Button
-                variant='contained'
-                color='navButton'
+                variant="contained"
+                color="navButton"
                 onClick={handleApplyValues}
                 sx={{
                   backgroundColor: CustomPalette.PRIMARY,
                   ":hover": { backgroundColor: CustomPalette.SECONDARY },
                   width: "100%",
                   maxWidth: "100px",
-                  marginTop: "35px",
+                  marginTop: "35px"
                 }}
               >
                 {t("Apply")}
               </Button>
-              <Typography style={{ marginTop: "20px", color: "red" }}>{t("NOTE: Please leave blank to not specify a min or max value")}</Typography>
+              <Typography style={{ marginTop: "20px", color: "red" }}>
+                {t("NOTE: Please leave blank to not specify a min or max value")}
+              </Typography>
             </>
           )}
         </Box>
@@ -383,7 +484,6 @@ const Cardinality = () => {
           <Button onClick={() => setOpenDialog(false)}>OK</Button>
         </DialogActions>
       </Dialog>
-
     </BackNextSkeleton>
   );
 };

@@ -2,7 +2,7 @@ import React, { forwardRef, memo, useCallback, useState } from "react";
 import { IconButton, MenuItem } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { DropdownMenuList } from "../components/DropdownMenuCell";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import {
   CUSTOM_FORMAT_RULE,
   descriptionToFormatCodeBinary,

@@ -9,7 +9,7 @@ import React, { useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import AccordionItemWrapper from "./AccordionItemWrapper";
 import Drop from "../StartSchema/Drop";
 import { Context } from "../App";
@@ -26,8 +26,9 @@ import InvalidOCAPackageMessage from "./InvalidOCAPackageMessage";
 
 const UseASchemaAccordionItem = ({ isInvalidOcaPackage }) => {
   const navigate = useNavigate();
-  const { zipToReadme, jsonToReadme, OCAPackage, setEditingSchemaId } = useContext(Context);
-  
+  const { zipToReadme, jsonToReadme, OCAPackage, setEditingSchemaId } =
+    useContext(Context);
+
   // Multi-schema context
   const { switchToSchema } = useMultiSchema();
   const { toTextFile } = useGenerateReadMe();
@@ -53,7 +54,7 @@ const UseASchemaAccordionItem = ({ isInvalidOcaPackage }) => {
   const navigateToMetadataPage = () => {
     // Completely rewrite to match the visualization Edit button functionality
     const schemaId = OCAPackage?.bundle?.d;
-    
+
     if (schemaId) {
       // Use multi-schema context to switch to the selected schema
       switchToSchema(schemaId, OCAPackage);

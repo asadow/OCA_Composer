@@ -18,7 +18,7 @@ import { PlaceholderNode, DetailedNode, TreeNode } from "./CustomNodes";
 import { generateTreeLayout, generateDetailedLayout } from "./layoutGenerators";
 import { extractSchemaDataFromPackage } from "./dataUtils";
 import { toThreeLetterCode } from "../constants/isoCodes";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import Spinner from "../components/Spinner";
 
 const nodeTypes = {

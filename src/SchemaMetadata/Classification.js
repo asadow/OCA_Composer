@@ -5,31 +5,40 @@ import Select from "@mui/material/Select";
 import { Box, Tooltip, Typography } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { useTranslation } from "react-i18next";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import { classification } from "../constants/constants";
 import { Context } from "../App";
 
 const Classification = () => {
   const { t } = useTranslation();
-  const {
-    divisionGroup,
-    setDivisionGroup
-  } = useContext(Context);
+  const { divisionGroup, setDivisionGroup } = useContext(Context);
 
-  const divisionsDropdown = useMemo(() => Object.keys(classification).map((division) => (
-        <MenuItem sx={{ height: "38px" }} key={division} value={division}>{division}</MenuItem>
-      )), []);
+  const divisionsDropdown = useMemo(
+    () =>
+      Object.keys(classification).map((division) => (
+        <MenuItem sx={{ height: "38px" }} key={division} value={division}>
+          {division}
+        </MenuItem>
+      )),
+    []
+  );
 
-  const groupsDropdown = useMemo(() => classification[divisionGroup.division].map((group) => (
-        <MenuItem sx={{ height: "38px" }} key={group} value={group}>{group}</MenuItem>
-      )), [divisionGroup.division]);
+  const groupsDropdown = useMemo(
+    () =>
+      classification[divisionGroup.division].map((group) => (
+        <MenuItem sx={{ height: "38px" }} key={group} value={group}>
+          {group}
+        </MenuItem>
+      )),
+    [divisionGroup.division]
+  );
 
   useEffect(() => {
     // Only change when the groups is not within the division
-    if (!(classification[divisionGroup.division].includes(divisionGroup.group))) {
+    if (!classification[divisionGroup.division].includes(divisionGroup.group)) {
       setDivisionGroup((prev) => ({
         ...prev,
-        group: classification[prev.division][0],
+        group: classification[prev.division][0]
       }));
     }
   }, [divisionGroup.division, setDivisionGroup]);
@@ -43,40 +52,53 @@ const Classification = () => {
             fontWeight: "bold",
             textAlign: "left",
             width: "12rem",
-            color: CustomPalette.BLACK,
+            color: CustomPalette.BLACK
           }}
-        >{t("Schema Classification")}</Typography>
+        >
+          {t("Schema Classification")}
+        </Typography>
         <Tooltip
-          title={t("Select the division and group that best reflects how you would classify your schema")}
+          title={t(
+            "Select the division and group that best reflects how you would classify your schema"
+          )}
           placement="right"
           arrow
         >
           <HelpOutlineIcon sx={{ fontSize: 15 }} />
         </Tooltip>
       </Box>
-      <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "space-between" }}>
+      <Box
+        sx={{ display: "flex", flexDirection: "row", justifyContent: "space-between" }}
+      >
         <FormControl variant="standard" sx={{ minWidth: 120, width: "45%" }}>
           <Typography variant="body2">{t("Divisions")}</Typography>
           <Select
             value={divisionGroup.division}
-            onChange={(e) => setDivisionGroup((prev) => ({ ...prev, division: e.target.value }))}
+            onChange={(e) =>
+              setDivisionGroup((prev) => ({ ...prev, division: e.target.value }))
+            }
             displayEmpty
           >
             {divisionsDropdown}
           </Select>
         </FormControl>
-        <FormControl variant="standard" sx={{ minWidth: 120, width: "45%", marginBottom: "0.5rem" }}>
+        <FormControl
+          variant="standard"
+          sx={{ minWidth: 120, width: "45%", marginBottom: "0.5rem" }}
+        >
           <Typography variant="body2">{t("Groups")}</Typography>
           <Select
             value={divisionGroup.group}
-            onChange={(e) => setDivisionGroup((prev) => ({ ...prev, group: e.target.value }))}
+            onChange={(e) =>
+              setDivisionGroup((prev) => ({ ...prev, group: e.target.value }))
+            }
             displayEmpty
           >
             {groupsDropdown}
           </Select>
         </FormControl>
       </Box>
-    </Box >
+    </Box>
   );
 };
 

@@ -24,7 +24,7 @@ import { PlaceholderNode, DetailedNode } from "./CustomNodes";
 import { generateTreeLayout, generateDetailedLayout } from "./layoutGenerators";
 import { extractSchemaDataFromPackage } from "./dataUtils";
 import { toThreeLetterCode } from "../constants/isoCodes";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import "./SchemaVisualization.css";
 
 // Custom node types for React Flow

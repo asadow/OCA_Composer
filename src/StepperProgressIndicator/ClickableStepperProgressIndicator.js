@@ -1,8 +1,12 @@
 import React from "react";
 import { Box, Step, StepLabel, Stepper } from "@mui/material";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 
-export default function ClickableStepperProgressIndicator({ activeStep, steps, onStepClick }) {
+export default function ClickableStepperProgressIndicator({
+  activeStep,
+  steps,
+  onStepClick
+}) {
   return (
     <Box sx={{ px: 10, py: 4 }}>
       <Stepper activeStep={activeStep} alternativeLabel>
@@ -45,5 +49,3 @@ export default function ClickableStepperProgressIndicator({ activeStep, steps, o
     </Box>
   );
 }
-
-

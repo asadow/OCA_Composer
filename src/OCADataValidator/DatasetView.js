@@ -1,4 +1,13 @@
-import React, { forwardRef, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  forwardRef,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import { Box, IconButton, Typography } from "@mui/material";
 import { AgGridReact } from "ag-grid-react";
 import { useTranslation } from "react-i18next";
@@ -6,10 +15,10 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import { Context } from "../App";
 import { greyCellStyle, gridStyles } from "../constants/styles";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 
 export const TrashCanButton = memo(
-  forwardRef((props, ref) => {
+  forwardRef((props) => {
     const onClick = useCallback(() => {
       props.delete();
     }, [props]);
@@ -20,7 +29,7 @@ export const TrashCanButton = memo(
           pr: 1,
           color: CustomPalette.GREY_600,
           transition: "all 0.2s ease-in-out",
-          display: props.node.data?.FormatText === "" ? "none" : "block",
+          display: props.node.data?.FormatText === "" ? "none" : "block"
         }}
         onClick={onClick}
       >
@@ -44,10 +53,13 @@ const DatasetView = () => {
   const [schemaColumnDefs, setSchemaColumnDefs] = useState([]);
   const [schemaTableLength, setSchemaTableLength] = useState(0);
 
-  const defaultColDef = useMemo(() => ({
+  const defaultColDef = useMemo(
+    () => ({
       editable: true,
-      cellDataType: false,
-    }), []);
+      cellDataType: false
+    }),
+    []
+  );
 
   useEffect(() => {
     const schemaTitles = [];
@@ -60,30 +72,28 @@ const DatasetView = () => {
           field: header,
           width: 100,
           resizable: true,
-          editable: true,
+          editable: true
         });
         newSchemaTableLength += 100;
       });
     }
 
-    schemaTitles.push(
-      {
-        headerName: "",
-        field: "Delete",
-        cellRendererFramework: TrashCanButton,
-        width: 50,
-        cellRendererParams: (params) => ({
-          delete: () => {
-            schemaGridRef.current.api.applyTransaction({
-              remove: [params.node.data],
-            });
-            schemaGridRef.current.api.redrawRows();
-          }
-        }),
-        pinned: "right",
-        cellStyle: () => greyCellStyle,
-      }
-    );
+    schemaTitles.push({
+      headerName: "",
+      field: "Delete",
+      cellRendererFramework: TrashCanButton,
+      width: 50,
+      cellRendererParams: (params) => ({
+        delete: () => {
+          schemaGridRef.current.api.applyTransaction({
+            remove: [params.node.data]
+          });
+          schemaGridRef.current.api.redrawRows();
+        }
+      }),
+      pinned: "right",
+      cellStyle: () => greyCellStyle
+    });
 
     setSchemaTableLength(newSchemaTableLength);
     setSchemaColumnDefs(schemaTitles);
@@ -118,16 +128,26 @@ const DatasetView = () => {
           }
         }}
       />
-      <Box sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        flex: 1,
-      }}>
-        <Typography variant="h5" sx={{ mb: 2, color: CustomPalette.PRIMARY, fontWeight: 500 }}>{t("Schema Data")}</Typography>
-        {schemaDataConformantHeader && schemaDataConformantHeader?.length > 0 ?
-          <div className="ag-theme-balham" style={{ width: schemaTableLength, maxWidth: "90%", height: "45vh" }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          flex: 1
+        }}
+      >
+        <Typography
+          variant="h5"
+          sx={{ mb: 2, color: CustomPalette.PRIMARY, fontWeight: 500 }}
+        >
+          {t("Schema Data")}
+        </Typography>
+        {schemaDataConformantHeader && schemaDataConformantHeader?.length > 0 ? (
+          <div
+            className="ag-theme-balham"
+            style={{ width: schemaTableLength, maxWidth: "90%", height: "45vh" }}
+          >
             <style>{gridStyles}</style>
             <AgGridReact
               ref={schemaGridRef}
@@ -137,7 +157,9 @@ const DatasetView = () => {
               suppressFieldDotNotation
             />
           </div>
-          : <Typography>{t("No Schema Conformant Data")}</Typography>}
+        ) : (
+          <Typography>{t("No Schema Conformant Data")}</Typography>
+        )}
       </Box>
     </>
   );

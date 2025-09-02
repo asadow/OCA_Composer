@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import Description from "./Description";
 import LanguageSelection from "./LanguageSelection";
 import NavigationCard from "../constants/NavigationCard";
-import { CustomPalette } from "../constants/customPalette";
+import CustomPalette from "../constants/customPalette";
 import { Context } from "../App";
 import { removeSpacesFromObjectOfObjects } from "../constants/removeSpaces";
 import IntroCard from "./IntroCard";
@@ -21,7 +21,7 @@ export default function SchemaMetadata({
   pageBack,
   pageForward,
   showIntroCard,
-  setShowIntroCard,
+  setShowIntroCard
 }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -30,17 +30,17 @@ export default function SchemaMetadata({
   const [fieldArray, setFieldArray] = useState([]);
   const [showIsoInput, setShowIsoInput] = useState(false);
   const [editingLanguage, setEditingLanguage] = useState("");
-  const { 
-    schemaDescription, 
-    setSchemaDescription, 
-    languages, 
-    history, 
-    setHistory, 
-    setCurrentPage,
+  const {
+    schemaDescription,
+    setSchemaDescription,
+    languages,
+    history,
+    setHistory,
+    setCurrentPage
   } = useContext(Context);
 
-
-  const toTitleCase = (str) => str.toLowerCase().replace(/^(.)|\s(.)/g, (match) => match.toUpperCase());
+  const toTitleCase = (str) =>
+    str.toLowerCase().replace(/^(.)|\s(.)/g, (match) => match.toUpperCase());
 
   const handleForward = () => {
     const noSpacesObject = removeSpacesFromObjectOfObjects(schemaDescription);
@@ -71,10 +71,7 @@ export default function SchemaMetadata({
     const handleDisableClick = (event) => {
       if (showIsoInput) {
         const { target } = event;
-        if (
-          target !== defaultButton.current &&
-          target !== addCustomButton.current
-        ) {
+        if (target !== defaultButton.current && target !== addCustomButton.current) {
           event.stopPropagation();
         }
       }
@@ -100,7 +97,12 @@ export default function SchemaMetadata({
   };
 
   return (
-    <BackNextSkeleton isBack pageBack={moveBackward} isForward pageForward={handleForward}>
+    <BackNextSkeleton
+      isBack
+      pageBack={moveBackward}
+      isForward
+      pageForward={handleForward}
+    >
       {showCard && (
         <NavigationCard
           fieldArray={fieldArray}
@@ -120,10 +122,9 @@ export default function SchemaMetadata({
       <Box
         sx={{
           mt: 2,
-          width: "100%",
+          width: "100%"
         }}
       >
-
         <Box sx={{ display: "flex", justifyContent: "space-between" }}>
           <Typography
             sx={{
@@ -131,7 +132,7 @@ export default function SchemaMetadata({
               fontWeight: "bold",
               textAlign: "left",
               margin: "1rem 0 1rem 0",
-              color: CustomPalette.PRIMARY,
+              color: CustomPalette.PRIMARY
             }}
           >
             {t("Schema Description")}
@@ -143,7 +144,7 @@ export default function SchemaMetadata({
                 position: "absolute",
                 zIndex: "1000",
                 top: 70,
-                width: "100%",
+                width: "100%"
               }}
             >
               {showLanguages && (
@@ -158,11 +159,13 @@ export default function SchemaMetadata({
               sx={{
                 display: "flex",
                 alignItems: "center",
-                color: CustomPalette.GREY_600,
+                color: CustomPalette.GREY_600
               }}
             >
               <Tooltip
-                title={t("Add another language to your schema. Without changing the basic structure of your schema...")}
+                title={t(
+                  "Add another language to your schema. Without changing the basic structure of your schema..."
+                )}
                 placement="left"
                 arrow
               >
@@ -176,15 +179,11 @@ export default function SchemaMetadata({
                   display: "flex",
                   justifyContent: "space-between",
                   width: "11rem",
-                  m: 2,
+                  m: 2
                 }}
               >
                 {t("Add Language")}
-                {showLanguages === true ? (
-                  <RemoveCircleIcon />
-                ) : (
-                  <AddCircleIcon />
-                )}
+                {showLanguages === true ? <RemoveCircleIcon /> : <AddCircleIcon />}
               </Button>
             </Box>
           </Box>
