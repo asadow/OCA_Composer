@@ -2,14 +2,24 @@ import React, { useContext } from "react";
 import { Box, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 
 export default function SchemaDescription({ currentLanguage }) {
   const { t } = useTranslation();
   const { schemaDescription, divisionGroup } = useContext(Context);
+  const { activeSchemaId, getSchemaState } = useMultiSchema();
 
-  const schemaName = schemaDescription?.[currentLanguage]?.name || t("Unknown");
+  // Prefer current schema state's metadata if available
+  const schemaState = activeSchemaId ? getSchemaState(activeSchemaId) : null;
+  const currentMeta = schemaState?.metadata || {};
+  const metaForLang = currentMeta; // metadata stores display names (English/French)
+
+  const schemaName =
+    metaForLang?.name || schemaDescription?.[currentLanguage]?.name || t("Unknown");
   const schemaDescriptionText =
-    schemaDescription?.[currentLanguage]?.description || t("No description available");
+    metaForLang?.description ||
+    schemaDescription?.[currentLanguage]?.description ||
+    t("No description available");
   const classification =
     divisionGroup?.group || divisionGroup?.division || t("Not classified");
 

@@ -416,7 +416,19 @@ export default function ViewSchema({
         <Typography
           sx={{ fontSize: 22, fontWeight: "bold", color: CustomPalette.PRIMARY }}
         >
-          {t("Attribute Details")}
+          {(() => {
+            const name = (() => {
+              try {
+                const st = getSchemaState(activeSchemaId);
+                return st?.metadata?.name || "";
+              } catch (_) {
+                return "";
+              }
+            })();
+            return name
+              ? `${t("Attribute Details for")} "${name}"`
+              : t("Attribute Details");
+          })()}
         </Typography>
         <Box sx={{ marginLeft: "0.5rem", color: CustomPalette.GREY_600 }}>
           <Tooltip
