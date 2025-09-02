@@ -31,9 +31,8 @@ const CheckboxRenderer = ({ value, rowIndex, colDef, gridRef, data }) => {
         if (!prevLists.includes(data.Attribute)) {
           nextLists = [...prevLists, data.Attribute];
         }
-        if (!nextEntryCodes[data.Attribute]) {
-          nextEntryCodes[data.Attribute] = [];
-        }
+        // Always reset to an empty array when toggling on to avoid stale data reuse
+        nextEntryCodes[data.Attribute] = [];
       } else {
         // Unmark as list and remove any existing entry codes for this attribute
         nextLists = prevLists.filter((a) => a !== data.Attribute);

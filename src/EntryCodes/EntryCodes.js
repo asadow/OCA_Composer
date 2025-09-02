@@ -7,6 +7,10 @@ import { removeSpacesAndColonFromArrayOfObjects } from "../constants/removeSpace
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import WarningEntryCodeDelete from "./WarningEntryCodeDelete";
 import { useMultiSchema } from "../context/MultiSchemaContext";
+import {
+  languageNameToAlpha3Codes,
+  alpha3CodesToTwoLetterCodes
+} from "../constants/isoCodes";
 
 const errorMessages = {
   fieldEmpty: "Please fill out all fields",
@@ -20,7 +24,7 @@ export default function EntryCodes() {
   const [errorMessage, setErrorMessage] = useState("");
   // Multi-schema context
   const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
-  
+
   // Global context
   const {
     attributeRowData: globalAttributeRowData,
@@ -34,13 +38,104 @@ export default function EntryCodes() {
 
   // Use MultiSchemaContext data if editing a specific schema, otherwise use global context
   const currentSchemaState = getSchemaState(activeSchemaId);
-  const attributeRowData = activeSchemaId && currentSchemaState ? currentSchemaState.attributes || [] : globalAttributeRowData;
-  const entryCodeRowData = activeSchemaId && currentSchemaState ? currentSchemaState.entryCodes || {} : globalEntryCodeRowData;
-  const attributesWithLists = activeSchemaId && currentSchemaState ? currentSchemaState.attributesWithLists || [] : globalAttributesWithLists;
+  const attributeRowData =
+    activeSchemaId && currentSchemaState
+      ? currentSchemaState.attributes || []
+      : globalAttributeRowData;
+  const entryCodeRowData =
+    activeSchemaId && currentSchemaState
+      ? currentSchemaState.entryCodes || {}
+      : globalEntryCodeRowData;
+  const attributesWithLists =
+    activeSchemaId && currentSchemaState
+      ? currentSchemaState.attributesWithLists || []
+      : globalAttributesWithLists;
   const [chosenTable, setChosenTable] = useState(0);
   const codeRefs = useRef();
   const pageForwardDisabledRef = useRef(false);
   const [showWarning, setShowWarning] = useState(false);
+  const { overlay } = useContext(Context);
+
+  // Prefill entry codes from overlays on first load if schema state is empty
+  useEffect(() => {
+    try {
+      const attrList = attributeRowData
+        .filter((a) => a.List === true)
+        .map((a) => a.Attribute);
+      if (!attrList || attrList.length === 0) return;
+
+      const overlayCodes = overlay?.entry_code?.attribute_entry_codes || {};
+      const overlayEntries = overlay?.entry || {};
+
+      // Debug info removed
+
+      // Determine if we already have an entryCodes array allocated for any list attributes
+      // Treat an existing empty array as intentional (user toggled list -> start empty)
+      const hasExisting = attrList.some((attr) =>
+        Array.isArray(entryCodeRowData?.[attr])
+      );
+      if (hasExisting) return;
+
+      const resolveAlpha3 = (lang) => {
+        if (!lang) return undefined;
+        const lower = String(lang).toLowerCase();
+        if (lower.length === 3) return lower;
+        if (lower.length === 2) {
+          // map 2-letter to 3-letter via reverse table
+          const match = Object.entries(alpha3CodesToTwoLetterCodes).find(
+            ([, two]) => two === lower
+          );
+          return match ? match[0] : undefined;
+        }
+        return languageNameToAlpha3Codes[lower];
+      };
+
+      const initialized = {};
+      attrList.forEach((attr) => {
+        const codes = Array.isArray(overlayCodes?.[attr]) ? overlayCodes[attr] : [];
+        if (codes.length === 0) return;
+        const rows = codes.map((code) => {
+          const row = { Code: code };
+          languages.forEach((languageName) => {
+            const alpha3 = resolveAlpha3(languageName);
+            const label = (alpha3 && overlayEntries?.[alpha3]?.[attr]?.[code]) || "";
+            row[languageName] = label || "";
+          });
+          return row;
+        });
+        initialized[attr] = rows;
+      });
+
+      if (Object.keys(initialized).length === 0) return;
+
+      // Update schema state
+      if (activeSchemaId) {
+        updateSchemaState(activeSchemaId, {
+          entryCodes: { ...entryCodeRowData, ...initialized }
+        });
+      }
+
+      // Always update the visible grid rows too for immediate UI feedback
+      const attributeArray = attrList;
+      const alignedEntryCodesArray = attributeArray.map((attr) => {
+        const rowsForAttr = Array.isArray(initialized[attr])
+          ? initialized[attr]
+          : [{ Code: "" }];
+        return rowsForAttr.map((r) => ({ ...r }));
+      });
+      setEntryCodeRowData(alignedEntryCodesArray);
+    } catch (_) {
+      // silent
+    }
+  }, [
+    activeSchemaId,
+    attributeRowData,
+    entryCodeRowData,
+    languages,
+    overlay,
+    updateSchemaState,
+    setEntryCodeRowData
+  ]);
 
   // Create codeRefs so there can be multiple grids on the page
   useEffect(() => {
@@ -65,11 +160,55 @@ export default function EntryCodes() {
       });
       return row;
     })();
+    const overlayCodes = overlay?.entry_code?.attribute_entry_codes || {};
+    const overlayEntries = overlay?.entry || {};
+    const resolveAlpha3 = (lang) => {
+      if (!lang) return undefined;
+      const lower = String(lang).toLowerCase();
+      if (lower.length === 3) return lower;
+      if (lower.length === 2) {
+        const match = Object.entries(alpha3CodesToTwoLetterCodes).find(
+          ([, two]) => two === lower
+        );
+        return match ? match[0] : undefined;
+      }
+      return languageNameToAlpha3Codes[lower];
+    };
+
     const alignedEntryCodesArray = attributeArray.map((attr) => {
-      const rowsForAttr = Array.isArray(entryCodeRowData[attr])
+      let rowsForAttr = Array.isArray(entryCodeRowData[attr])
         ? entryCodeRowData[attr]
-        : [emptyRow];
-      // Deep clone to decouple grid edits
+        : null;
+      // If current rows exist but labels are missing, backfill labels from overlays
+      if (Array.isArray(rowsForAttr) && rowsForAttr.length > 0) {
+        rowsForAttr = rowsForAttr.map((r) => {
+          const result = { ...r };
+          languages.forEach((languageName) => {
+            if (!result[languageName]) {
+              const alpha3 = resolveAlpha3(languageName);
+              const label = (alpha3 && overlayEntries?.[alpha3]?.[attr]?.[r.Code]) || "";
+              result[languageName] = label;
+            }
+          });
+          return result;
+        });
+      }
+      // If still no rows, try to build from overlays entirely
+      if (!rowsForAttr) {
+        const codes = Array.isArray(overlayCodes?.[attr]) ? overlayCodes[attr] : [];
+        if (codes.length > 0) {
+          rowsForAttr = codes.map((code) => {
+            const row = { Code: code };
+            languages.forEach((languageName) => {
+              const alpha3 = resolveAlpha3(languageName);
+              const label = (alpha3 && overlayEntries?.[alpha3]?.[attr]?.[code]) || "";
+              row[languageName] = label || "";
+            });
+            return row;
+          });
+        }
+      }
+      if (!rowsForAttr) rowsForAttr = [emptyRow];
       return rowsForAttr.map((r) => ({ ...r }));
     });
     setEntryCodeRowData(alignedEntryCodesArray);
@@ -78,7 +217,14 @@ export default function EntryCodes() {
     if (filteredAttributes.length === 0) {
       setCurrentPage("LanguageDetails");
     }
-  }, [attributeRowData, languages, entryCodeRowData, setEntryCodeRowData, setCurrentPage]);
+  }, [
+    attributeRowData,
+    languages,
+    entryCodeRowData,
+    overlay,
+    setEntryCodeRowData,
+    setCurrentPage
+  ]);
 
   const handleSave = () => {
     codeRefs.current.forEach((grid) => {
@@ -134,7 +280,7 @@ export default function EntryCodes() {
         entryCodes: newEntryCodesObject
       });
     }
-    
+
     // Also save to global context for compatibility
     setSavedEntryCodes(newEntryCodesObject);
   };

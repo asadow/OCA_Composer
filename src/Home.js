@@ -13,7 +13,7 @@ import { Context } from "./App";
 import Header from "./Header/Header";
 import Footer from "./Footer/Footer";
 import { useMultiSchema } from "./context/MultiSchemaContext";
-
+import ClickableStepperProgressIndicator from "./StepperProgressIndicator/ClickableStepperProgressIndicator";
 
 const Home = ({
   currentPage,
@@ -24,20 +24,32 @@ const Home = ({
   setShowIntroCard
 }) => {
   // Get context to check if we're editing a specific schema
-  const { editingSchemaId, OCAPackage, setEditingSchemaId, overlay, setOverlay } = useContext(Context);
-  const { setCurrentPackageId, loadFromLocalStorage, switchToSchema } = useMultiSchema();
+  const { editingSchemaId, OCAPackage, setEditingSchemaId, overlay, setOverlay } =
+    useContext(Context);
+  const {
+    setCurrentPackageId,
+    loadFromLocalStorage,
+    switchToSchema,
+    activeSchemaId,
+    schemaStates,
+    getSchemaState
+  } = useMultiSchema();
 
   // Register current package fingerprint for persistence namespace
   useEffect(() => {
     const computePackageId = (pkg) => {
       if (!pkg) return null;
       const root = pkg.bundle?.d || "root";
-      const deps = (pkg.dependencies || []).map((d) => d?.d).filter(Boolean).sort().join("|");
+      const deps = (pkg.dependencies || [])
+        .map((d) => d?.d)
+        .filter(Boolean)
+        .sort()
+        .join("|");
       return `${root}::${deps}`;
     };
     const id = computePackageId(OCAPackage);
     setCurrentPackageId(id);
-    
+
     // Try to load saved state for this package
     if (id) {
       loadFromLocalStorage(id);
@@ -59,7 +71,7 @@ const Home = ({
   useEffect(() => {
     if (!OCAPackage?.bundle?.overlays) return;
     const pkgOverlays = OCAPackage.bundle.overlays;
-    const newOverlay = { ...overlay };
+    const newOverlay = {};
 
     // Labels: array to { lang3: { attr: label } }
     if (Array.isArray(pkgOverlays.label)) {
@@ -98,9 +110,18 @@ const Home = ({
       newOverlay.character_encoding = pkgOverlays.character_encoding;
     if (pkgOverlays.conformance) newOverlay.conformance = pkgOverlays.conformance;
 
-    setOverlay(newOverlay);
-  }, [OCAPackage, overlay, setOverlay]);
-  
+    // Only update if the normalized overlay actually changed to prevent render loops
+    try {
+      const prev = JSON.stringify(overlay || {});
+      const next = JSON.stringify(newOverlay);
+      if (prev !== next) {
+        setOverlay(newOverlay);
+      }
+    } catch (_e) {
+      setOverlay(newOverlay);
+    }
+  }, [OCAPackage, setOverlay]);
+
   // Determine if we should use schema-aware components
 
   const [activeStep, setActiveStep] = useState(0);
@@ -123,16 +144,19 @@ const Home = ({
       // Prevent duplicates even if called multiple times rapidly
       const exists = currentSteps.some((s) => s.label === step.label);
       if (exists) return currentSteps;
-      return [
-        ...currentSteps.slice(0, position),
-        step,
-        ...currentSteps.slice(position)
-      ];
+      return [...currentSteps.slice(0, position), step, ...currentSteps.slice(position)];
     });
   };
 
   const removeStep = (stepLabel) => {
     setSteps((currentSteps) => currentSteps.filter((step) => step.label !== stepLabel));
+  };
+
+  const handleStepClick = (index) => {
+    const target = steps[index];
+    if (target?.page) {
+      setCurrentPage(target.page);
+    }
   };
 
   // Show Entry Codes step immediately if schema contains list attributes or entry overlays
@@ -170,7 +194,6 @@ const Home = ({
 
   // Add new page to this list
 
-
   // Update active step based on current page
   useEffect(() => {
     const stepIndex = steps.findIndex((step) => step.page === currentPage);
@@ -179,13 +202,51 @@ const Home = ({
     }
   }, [currentPage, steps]);
 
+  // Ensure Entry Codes step reflects the currently active schema (root or dependency)
+  const prevShouldShowRef = React.useRef(false);
+  useEffect(() => {
+    if (!activeSchemaId) return;
+    const state = getSchemaState(activeSchemaId);
+    const attributesArray = Array.isArray(state.attributes) ? state.attributes : [];
+    const hasExplicitListFlags = attributesArray.some(
+      (a) => a && (a.List === true || a.List === false)
+    );
+    const hasList = attributesArray.some((a) => a && a.List === true);
+    const hasEntryCodes = state?.entryCodes && Object.keys(state.entryCodes).length > 0;
+    const hasArrayTypes = attributesArray.some(
+      (a) => typeof a?.Type === "string" && a.Type.startsWith("Array[")
+    );
+
+    // Rule:
+    // - If explicit List flags exist, rely ONLY on (hasList || hasEntryCodes)
+    // - If no explicit flags yet (fresh import), fall back to array type heuristic
+    const shouldShow = hasExplicitListFlags
+      ? hasList || hasEntryCodes
+      : hasList || hasEntryCodes || hasArrayTypes;
+
+    if (shouldShow) {
+      insertStep(2, { label: "Entry Codes", page: "Codes" });
+    } else {
+      removeStep("Entry Codes");
+      if (currentPage === "Codes") {
+        setCurrentPage("LanguageDetails");
+      }
+    }
+
+    prevShouldShowRef.current = shouldShow;
+  }, [activeSchemaId, schemaStates, getSchemaState, currentPage, setCurrentPage]);
+
   return (
     <>
       <Header currentPage={currentPage} />
       <Box sx={{ flex: 1 }}>
         {/* debug logs removed to prevent noisy renders */}
         {currentPage !== "Start" && currentPage !== "Create" && (
-          <div />
+          <ClickableStepperProgressIndicator
+            activeStep={activeStep}
+            steps={steps}
+            onStepClick={handleStepClick}
+          />
         )}
         {currentPage === "Start" && <StartSchema pageForward={pageForward} />}
         {currentPage === "Metadata" && (
@@ -212,12 +273,8 @@ const Home = ({
         {currentPage === "View" && <ViewSchema pageBack={pageBack} addClearButton />}
         {currentPage === "Create" && <CreateManually />}
         {currentPage === "Overlays" && (
-          <Overlays
-            pageBack={pageBack}
-            pageForward={pageForward}
-          />
+          <Overlays pageBack={pageBack} pageForward={pageForward} />
         )}
-
       </Box>
       <Footer />
     </>
