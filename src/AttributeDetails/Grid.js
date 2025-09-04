@@ -114,9 +114,6 @@ export default function Grid({
           gridRef
         },
         cellRenderer: CheckboxRenderer,
-        cellRendererParams: {
-          gridRef
-        },
         checkboxSelection: false,
         cellStyle: () => flexCenter
       },
@@ -161,7 +158,14 @@ export default function Grid({
         },
         cellRenderer: CheckboxRenderer,
         cellRendererParams: {
-          gridRef
+          onToggleList: (attributeName, checked) => {
+            setAttributeRowData((prev) => {
+              const next = prev.map((row) =>
+                row.Attribute === attributeName ? { ...row, List: checked } : row
+              );
+              return next;
+            });
+          }
         },
         checkboxSelection: false,
         cellStyle: () => flexCenter,

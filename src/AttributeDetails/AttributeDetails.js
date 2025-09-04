@@ -1,4 +1,11 @@
-import React, { useRef, useContext, useState, useEffect } from "react";
+import React, {
+  useRef,
+  useContext,
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Box, Typography } from "@mui/material";
 import Grid from "./Grid";
@@ -16,7 +23,7 @@ import { FIELD_RANGE_OVERLAY } from "../constants/constants";
 import ErrorPopup from "../ViewSchema/ErrorPopup";
 import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 
-export default function AttributeDetails({ pageBack, pageForward, removeStep }) {
+const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref) => {
   const { t } = useTranslation();
   const {
     setAttributesWithLists,
@@ -29,7 +36,8 @@ export default function AttributeDetails({ pageBack, pageForward, removeStep }) 
   } = useContext(Context);
 
   // Use MultiSchemaContext for attribute data
-  const { getSchemaState, updateSchemaState } = useMultiSchema();
+  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  const currentSchemaId = activeSchemaId || editingSchemaId;
 
   // Local state for the current editing session
   const [attributeRowData, setAttributeRowData] = useState([]);
@@ -51,7 +59,7 @@ export default function AttributeDetails({ pageBack, pageForward, removeStep }) 
   const addButton1 = useRef();
   const addButton2 = useRef();
 
-  // Track initialization to prevent infinite loops
+  // Track initialization to prevent unnecessary package parsing
   const initializedSchemaRef = useRef(null);
 
   // Update types object when attribute data changes
@@ -64,8 +72,9 @@ export default function AttributeDetails({ pageBack, pageForward, removeStep }) 
   }, [attributeRowData]);
 
   // Ensure overlay state has all required keys
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (editingSchemaId && overlay) {
+    if (currentSchemaId && overlay) {
       // Ensure all required overlay keys are present
       const requiredOverlayKeys = [
         FIELD_RANGE_OVERLAY,
@@ -89,138 +98,144 @@ export default function AttributeDetails({ pageBack, pageForward, removeStep }) 
         });
       }
     }
-  }, [editingSchemaId, overlay, setOverlay]);
+  }, [currentSchemaId, overlay, setOverlay]);
 
-  // Initialize data when switching to edit a schema
+  // Initialize or refresh data when switching to edit a schema
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (editingSchemaId && initializedSchemaRef.current !== editingSchemaId) {
-      initializedSchemaRef.current = editingSchemaId;
-      setLoading(true);
+    if (!currentSchemaId) return;
+    setLoading(true);
 
-      const schemaState = getSchemaState(editingSchemaId);
+    const schemaState = getSchemaState(currentSchemaId);
 
-      // If we have existing data for this schema, use it
-      if (schemaState.attributes && schemaState.attributes.length > 0) {
-        setAttributeRowData(schemaState.attributes);
-        setAttributesList(schemaState.attributesList || []);
-        setLoading(false);
-      } else {
-        // Initialize from OCA package if no existing data
+    // Always prefer existing state if present (captures user edits like new attributes/lists)
+    if (schemaState?.attributes && schemaState.attributes.length > 0) {
+      // Avoid redundant updates to prevent flicker
+      const sameAttrs =
+        JSON.stringify(attributeRowData) === JSON.stringify(schemaState.attributes);
+      const sameList =
+        JSON.stringify(attributesList) ===
+        JSON.stringify(schemaState.attributesList || []);
+      if (!sameAttrs) setAttributeRowData(schemaState.attributes);
+      if (!sameList) setAttributesList(schemaState.attributesList || []);
+      setLoading(false);
+      initializedSchemaRef.current = currentSchemaId;
+      return;
+    }
 
-        const schemaData = getSchemaDataById(OCAPackage, editingSchemaId);
+    // Otherwise, initialize from OCA package
+    const schemaData = getSchemaDataById(OCAPackage, currentSchemaId);
 
-        if (schemaData) {
-          const schemaAttributes = schemaData.attributes || {};
-          const newAttributeRowData = Object.entries(schemaAttributes).map(
-            ([key, value]) => {
-              // Check if this attribute has entry codes (is a list)
-              const hasEntryCodes =
-                (schemaData.overlays?.entry &&
-                  schemaData.overlays.entry.some(
-                    (entryOverlay) =>
-                      entryOverlay.attribute_entries &&
-                      entryOverlay.attribute_entries[key]
-                  )) ||
-                (schemaData.overlays?.entry_code &&
-                  schemaData.overlays.entry_code.attribute_entry_codes &&
-                  schemaData.overlays.entry_code.attribute_entry_codes[key]);
+    if (schemaData) {
+      const schemaAttributes = schemaData.attributes || {};
+      const newAttributeRowData = Object.entries(schemaAttributes).map(([key, value]) => {
+        // Check if this attribute has entry codes (is a list)
+        const hasEntryCodes =
+          (schemaData.overlays?.entry &&
+            schemaData.overlays.entry.some(
+              (entryOverlay) =>
+                entryOverlay.attribute_entries && entryOverlay.attribute_entries[key]
+            )) ||
+          (schemaData.overlays?.entry_code &&
+            schemaData.overlays.entry_code.attribute_entry_codes &&
+            schemaData.overlays.entry_code.attribute_entry_codes[key]);
 
-              // Handle schema references (refs/refn) - these should be "Child Schema" not a type
-              let displayType = value;
-              if (Array.isArray(value)) {
-                const arrayType = value[0] || "Unknown";
-                displayType = `Array[${arrayType}]`;
-              }
-              if (
-                displayType &&
-                (displayType.startsWith("refs:") || displayType.startsWith("refn:"))
-              ) {
-                displayType = "Child Schema";
-              }
+        // Handle schema references (refs/refn) - these should be "Child Schema" not a type
+        let displayType = value;
+        if (Array.isArray(value)) {
+          const arrayType = value[0] || "Unknown";
+          displayType = `Array[${arrayType}]`;
+        }
+        if (
+          displayType &&
+          (displayType.startsWith("refs:") || displayType.startsWith("refn:"))
+        ) {
+          displayType = "Child Schema";
+        }
 
-              return {
-                Attribute: key,
-                Type: displayType,
-                Description: "",
-                Required: false,
-                EntryCodes: [],
-                List: hasEntryCodes
-              };
+        return {
+          Attribute: key,
+          Type: displayType,
+          Description: "",
+          Required: false,
+          EntryCodes: [],
+          List: hasEntryCodes
+        };
+      });
+
+      // Avoid redundant updates to prevent flicker
+      const nextList = Object.keys(schemaAttributes);
+      const sameAttrs =
+        JSON.stringify(attributeRowData) === JSON.stringify(newAttributeRowData);
+      const sameList = JSON.stringify(attributesList) === JSON.stringify(nextList);
+      if (!sameAttrs) setAttributeRowData(newAttributeRowData);
+      if (!sameList) setAttributesList(nextList);
+
+      // Save to MultiSchemaContext
+      updateSchemaState(currentSchemaId, {
+        attributes: newAttributeRowData,
+        attributesList: Object.keys(schemaAttributes)
+      });
+
+      // Update overlay context with schema's overlay data
+      if (schemaData.overlays) {
+        const newOverlay = { ...overlay };
+
+        // Import label overlays
+        if (schemaData.overlays.label && Array.isArray(schemaData.overlays.label)) {
+          const labelOverlays = {};
+          schemaData.overlays.label.forEach((labelOverlay) => {
+            const lang = labelOverlay.language;
+            if (lang) {
+              labelOverlays[lang] = labelOverlay.attribute_labels || {};
             }
-          );
-
-          setAttributeRowData(newAttributeRowData);
-          setAttributesList(Object.keys(schemaAttributes));
-
-          // Save to MultiSchemaContext
-          updateSchemaState(editingSchemaId, {
-            attributes: newAttributeRowData,
-            attributesList: Object.keys(schemaAttributes)
           });
+          newOverlay.label = labelOverlays;
+        }
 
-          // Entry Codes step is managed centrally in Home.js
+        // Import other overlays
+        if (schemaData.overlays.unit) newOverlay.unit = schemaData.overlays.unit;
+        if (schemaData.overlays.cardinality)
+          newOverlay.cardinality = schemaData.overlays.cardinality;
+        if (schemaData.overlays.format) newOverlay.format = schemaData.overlays.format;
+        if (schemaData.overlays.character_encoding)
+          newOverlay.character_encoding = schemaData.overlays.character_encoding;
+        if (schemaData.overlays.conformance)
+          newOverlay.conformance = schemaData.overlays.conformance;
 
-          // Update overlay context with schema's overlay data
-          if (schemaData.overlays) {
-            const newOverlay = { ...overlay };
-
-            // Import label overlays
-            if (schemaData.overlays.label && Array.isArray(schemaData.overlays.label)) {
-              const labelOverlays = {};
-              schemaData.overlays.label.forEach((labelOverlay) => {
-                const lang = labelOverlay.language;
-                if (lang) {
-                  labelOverlays[lang] = labelOverlay.attribute_labels || {};
-                }
-              });
-              newOverlay.label = labelOverlays;
+        // Import entry overlays
+        if (schemaData.overlays.entry && Array.isArray(schemaData.overlays.entry)) {
+          const entryOverlays = {};
+          schemaData.overlays.entry.forEach((entryOverlay) => {
+            const lang = entryOverlay.language;
+            if (lang) {
+              entryOverlays[lang] = entryOverlay.attribute_entries || {};
             }
+          });
+          newOverlay.entry = entryOverlays;
+        }
 
-            // Import other overlays
-            if (schemaData.overlays.unit) newOverlay.unit = schemaData.overlays.unit;
-            if (schemaData.overlays.cardinality)
-              newOverlay.cardinality = schemaData.overlays.cardinality;
-            if (schemaData.overlays.format)
-              newOverlay.format = schemaData.overlays.format;
-            if (schemaData.overlays.character_encoding)
-              newOverlay.character_encoding = schemaData.overlays.character_encoding;
-            if (schemaData.overlays.conformance)
-              newOverlay.conformance = schemaData.overlays.conformance;
+        // Import entry_code overlays
+        if (schemaData.overlays.entry_code) {
+          newOverlay.entry_code = schemaData.overlays.entry_code;
+        }
 
-            // Import entry overlays
-            if (schemaData.overlays.entry && Array.isArray(schemaData.overlays.entry)) {
-              const entryOverlays = {};
-              schemaData.overlays.entry.forEach((entryOverlay) => {
-                const lang = entryOverlay.language;
-                if (lang) {
-                  entryOverlays[lang] = entryOverlay.attribute_entries || {};
-                }
-              });
-              newOverlay.entry = entryOverlays;
-            }
-
-            // Import entry_code overlays
-            if (schemaData.overlays.entry_code) {
-              newOverlay.entry_code = schemaData.overlays.entry_code;
-            }
-
+        // Avoid redundant overlay updates
+        try {
+          const prev = JSON.stringify(overlay || {});
+          const next = JSON.stringify(newOverlay);
+          if (prev !== next) {
             setOverlay(newOverlay);
           }
+        } catch (_e) {
+          setOverlay(newOverlay);
         }
-        setLoading(false);
       }
     }
-  }, [editingSchemaId, OCAPackage]);
+    setLoading(false);
+  }, [currentSchemaId, OCAPackage, getSchemaState, updateSchemaState]);
 
-  // Save attribute data to MultiSchemaContext whenever it changes
-  useEffect(() => {
-    if (editingSchemaId) {
-      updateSchemaState(editingSchemaId, {
-        attributes: attributeRowData,
-        attributesList
-      });
-    }
-  }, [attributeRowData, attributesList, editingSchemaId, updateSchemaState]);
+  // Intentionally removed continuous auto-sync to prevent flicker.
 
   // Keep global context in sync with local state
   useEffect(() => {
@@ -377,9 +392,23 @@ export default function AttributeDetails({ pageBack, pageForward, removeStep }) 
       } else {
         removeStep("Entry Codes");
       }
+
+      // Persist attributes and list to MultiSchemaContext in one place to avoid flicker
+      if (currentSchemaId) {
+        updateSchemaState(currentSchemaId, {
+          attributes: attributeRowData,
+          attributesList: validationResult,
+          attributesWithLists: newAttributesWithLists
+        });
+      }
       navigationSafe.current = true;
     }
   };
+
+  // Expose save to parent (Home) so stepper click can persist before navigation
+  useImperativeHandle(ref, () => ({
+    save: handleSave
+  }));
 
   const pageForwardSave = () => {
     handleSave();
@@ -466,4 +495,6 @@ export default function AttributeDetails({ pageBack, pageForward, removeStep }) 
       />
     </BackNextSkeleton>
   );
-}
+});
+
+export default AttributeDetails;

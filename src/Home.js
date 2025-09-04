@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import "./App.css";
 import { Box, Typography } from "@mui/material";
 import StartSchema from "./StartSchema/StartSchema";
@@ -154,26 +154,19 @@ const Home = ({
   };
 
   const [showValidationPopup, setShowValidationPopup] = useState(false);
+  const entryCodesRef = useRef(null);
+  const attributeDetailsRef = useRef(null);
 
   // Validation function to check if navigation should be allowed
   const validateNavigation = () => {
     if (currentPage === "Details") {
-      console.log("Validating navigation from Details step");
       const currentSchemaState = getSchemaState(activeSchemaId);
-      console.log("Current schema state:", currentSchemaState);
-      console.log("Active schema ID:", activeSchemaId);
-
       if (!currentSchemaState || !currentSchemaState.attributes) {
-        console.log("No schema state or attributes found");
         return true; // Allow navigation if no schema state
       }
-
       const hasBlankTypes = currentSchemaState.attributes.some(
         (attr) => !attr?.Type || attr.Type === ""
       );
-      console.log("Has blank types:", hasBlankTypes);
-      console.log("Attributes:", currentSchemaState.attributes);
-
       return !hasBlankTypes;
     }
     return true; // Allow navigation for other steps
@@ -184,18 +177,27 @@ const Home = ({
     if (target?.page) {
       // If we're currently on the Details step, validate before allowing navigation
       if (currentPage === "Details") {
-        console.log("Currently on Details step, validating navigation...");
-        console.log("Current page:", currentPage);
-        console.log("Active schema ID:", activeSchemaId);
-
+        // Persist edits before validating/navigation
+        if (
+          attributeDetailsRef.current &&
+          typeof attributeDetailsRef.current.save === "function"
+        ) {
+          attributeDetailsRef.current.save();
+        }
         if (!validateNavigation()) {
-          console.log("Validation failed - showing popup");
           // Show validation popup
           setShowValidationPopup(true);
-          console.log("Set showValidationPopup to true");
           return; // Prevent navigation
         }
-        console.log("Validation passed - allowing navigation");
+      }
+
+      // If leaving Entry Codes step, persist any edits before navigation
+      if (
+        currentPage === "Codes" &&
+        entryCodesRef.current &&
+        typeof entryCodesRef.current.save === "function"
+      ) {
+        entryCodesRef.current.save();
       }
 
       setCurrentPage(target.page);
@@ -318,13 +320,14 @@ const Home = ({
         )}
         {currentPage === "Details" && (
           <AttributeDetails
+            ref={attributeDetailsRef}
             pageBack={pageBack}
             pageForward={pageForward}
             insertStep={insertStep}
             removeStep={removeStep}
           />
         )}
-        {currentPage === "Codes" && <EntryCodes />}
+        {currentPage === "Codes" && <EntryCodes ref={entryCodesRef} />}
 
         {currentPage === "LanguageDetails" && (
           <LanguageDetails pageBack={pageBack} pageForward={pageForward} />

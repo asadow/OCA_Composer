@@ -1,4 +1,12 @@
-import React, { useContext, useEffect, useState, useRef } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+  useMemo
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Typography } from "@mui/material";
 import { Context } from "../App";
@@ -16,13 +24,11 @@ const errorMessages = {
   fieldEmpty: "Please fill out all fields",
   quoteMisuse: "Fields cannot contain quotes or commas"
 };
-
-export default function EntryCodes() {
+const EntryCodes = forwardRef((props, ref) => {
   const { t } = useTranslation();
   const [selectedAttributes, setSelectedAttributes] = useState({});
   const [selectedAttributesList, setSelectedAttributesList] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
-  // Multi-schema context
   const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
 
   // Global context
@@ -38,18 +44,27 @@ export default function EntryCodes() {
 
   // Use MultiSchemaContext data if editing a specific schema, otherwise use global context
   const currentSchemaState = getSchemaState(activeSchemaId);
-  const attributeRowData =
-    activeSchemaId && currentSchemaState
-      ? currentSchemaState.attributes || []
-      : globalAttributeRowData;
-  const entryCodeRowData =
-    activeSchemaId && currentSchemaState
-      ? currentSchemaState.entryCodes || {}
-      : globalEntryCodeRowData;
-  const attributesWithLists =
-    activeSchemaId && currentSchemaState
-      ? currentSchemaState.attributesWithLists || []
-      : globalAttributesWithLists;
+  const attributeRowData = useMemo(
+    () =>
+      activeSchemaId && currentSchemaState
+        ? currentSchemaState.attributes || []
+        : globalAttributeRowData,
+    [activeSchemaId, currentSchemaState, globalAttributeRowData]
+  );
+  const entryCodeRowData = useMemo(
+    () =>
+      activeSchemaId && currentSchemaState
+        ? currentSchemaState.entryCodes || {}
+        : globalEntryCodeRowData,
+    [activeSchemaId, currentSchemaState, globalEntryCodeRowData]
+  );
+  const attributesWithLists = useMemo(
+    () =>
+      activeSchemaId && currentSchemaState
+        ? currentSchemaState.attributesWithLists || []
+        : globalAttributesWithLists,
+    [activeSchemaId, currentSchemaState, globalAttributesWithLists]
+  );
   const [chosenTable, setChosenTable] = useState(0);
   const codeRefs = useRef();
   const pageForwardDisabledRef = useRef(false);
@@ -231,22 +246,20 @@ export default function EntryCodes() {
       grid.current.api.stopEditing();
     });
 
+    // Build object keyed by attribute from the grid's visible array state
+    // The visible array is stored in global context (aligned to selectedAttributesList order)
+    const rowsArray = Array.isArray(globalEntryCodeRowData) ? globalEntryCodeRowData : [];
     const newEntryCodeObject = {};
-    attributesWithLists.forEach((item) => {
-      const newEntryCodeArray = [];
-      // Check if entryCodeRowData exists for this attribute
-      if (entryCodeRowData[item] && Array.isArray(entryCodeRowData[item])) {
-        entryCodeRowData[item].forEach((obj) => {
-          const newObj = {};
-          newObj.Code = obj.Code;
-          languages.forEach((language) => {
-            newObj[language] = obj[language] || "";
-          });
-          newEntryCodeArray.push(newObj);
+    selectedAttributesList.forEach((attrName, index) => {
+      const sourceRows = Array.isArray(rowsArray[index]) ? rowsArray[index] : [];
+      const normalizedRows = sourceRows.map((obj) => {
+        const normalized = { Code: obj.Code };
+        languages.forEach((language) => {
+          normalized[language] = obj[language] || "";
         });
-      }
-
-      newEntryCodeObject[item] = newEntryCodeArray;
+        return normalized;
+      });
+      newEntryCodeObject[attrName] = normalizedRows;
     });
 
     // setSavedEntryCodes(newEntryCodeObject);
@@ -299,6 +312,11 @@ export default function EntryCodes() {
     }
   };
 
+  // expose save method to parent (Home) so it can persist edits on navigation
+  useImperativeHandle(ref, () => ({
+    save: handleSave
+  }));
+
   const allCodesDisplay = selectedAttributesList.map((item, index) => (
     <SingleTable
       attribute={selectedAttributes[index]}
@@ -346,4 +364,6 @@ export default function EntryCodes() {
       </Box>
     </BackNextSkeleton>
   );
-}
+});
+
+export default EntryCodes;
