@@ -29,7 +29,7 @@ const useHandleAllDrop = (pageForward) => {
     setExcelSheetChoice,
     setOCAPackage
   } = useContext(Context);
-  const { clearAllSchemas, switchToSchema } = useMultiSchema();
+  const { clearAllSchemas, switchToSchema, initializeFromOCAPackage } = useMultiSchema();
   const { processLanguages, processMetadata, processLabelsDescriptionRootUnitsEntries } =
     useZipParser();
 
@@ -558,6 +558,10 @@ const useHandleAllDrop = (pageForward) => {
           //   getUnitsFramedThatAlreadyExistInOcaPackage(jsonFile)
           // );
           setOCAPackage(jsonFile);
+          
+          // NEW: Initialize MultiSchemaContext with complete package data
+          initializeFromOCAPackage(jsonFile);
+          
           // Set editing schema to root schema
           switchToSchema(jsonFile.oca_bundle.bundle.d, jsonFile);
           handleBundleJSONDrop(modifiedBundle, jsonFile);
@@ -567,10 +571,20 @@ const useHandleAllDrop = (pageForward) => {
           if (jsonFile?.dependencies && Array.isArray(jsonFile.dependencies)) {
             const sanitizedOcaPackage = { ...jsonFile, bundle: modifiedJsonFile };
             setOCAPackage(sanitizedOcaPackage);
+            
+            // NEW: Initialize MultiSchemaContext with complete package data
+            initializeFromOCAPackage(sanitizedOcaPackage);
+            
             // Set editing schema to root schema
             switchToSchema(jsonFile.bundle.d, sanitizedOcaPackage);
             handleBundleJSONDrop(modifiedJsonFile, sanitizedOcaPackage);
           } else {
+            // Single schema package
+            setOCAPackage(jsonFile);
+            
+            // NEW: Initialize MultiSchemaContext
+            initializeFromOCAPackage(jsonFile);
+            
             switchToSchema(jsonFile.bundle.d, jsonFile);
             handleBundleJSONDrop(modifiedJsonFile);
           }

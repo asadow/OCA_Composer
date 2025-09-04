@@ -27,19 +27,19 @@ import { toThreeLetterCode } from "../constants/isoCodes";
 const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref) => {
   const { t, i18n } = useTranslation();
   
-  // Get OCAPackage and overlay from App context
+  // Get overlay from App context (still needed for UI state)
   const {
-    OCAPackage,
     overlay,
     setOverlay
   } = useContext(Context);
   
-  // Use only MultiSchemaContext through useMultiSchema hook
+  // Use only MultiSchemaContext - unified approach
   const {
     activeSchemaId,
     editingSchemaId,
     getSchemaState,
-    updateSchemaState
+    updateSchemaState,
+    getCompleteSchema
   } = useMultiSchema();
 
   const currentSchemaId = activeSchemaId || editingSchemaId;
@@ -114,37 +114,28 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
     
     // Get current language code for schema data
     const languageCode = toThreeLetterCode(i18n.language.split("-")[0]) || "eng";
-    const schemaData = getSchemaDataById(OCAPackage, currentSchemaId, languageCode);
+    // NEW UNIFIED APPROACH: Get complete schema data directly
+    const completeSchema = getCompleteSchema(currentSchemaId);
 
     // Debug logging
-    console.log("AttributeDetails initialization:", {
+    console.log("AttributeDetails initialization (UNIFIED):", {
       currentSchemaId,
       hasSchemaState: !!schemaState,
       schemaStateAttributes: schemaState?.attributes?.length || 0,
-      hasSchemaData: !!schemaData,
-      schemaDataAttributes: schemaData?.attributes ? Object.keys(schemaData.attributes) : null
+      hasCompleteSchema: !!completeSchema,
+      completeSchemaAttributes: completeSchema?.attributes ? Object.keys(completeSchema.attributes) : null
     });
 
-    // Debug OCAPackage structure
-    console.log("OCAPackage debug:", {
-      hasOCAPackage: !!OCAPackage,
-      bundleDigest: OCAPackage?.bundle?.d,
-      hasDependencies: !!OCAPackage?.dependencies,
-      dependencyCount: OCAPackage?.dependencies?.length || 0,
-      dependencyDigests: OCAPackage?.dependencies?.map(dep => dep.d) || []
-    });
-
-    // Check if existing state matches the schema's actual attributes from OCA package
-    if (schemaState?.attributes && schemaState.attributes.length > 0 && schemaData) {
-      const schemaAttributes = schemaData.attributes || {};
+    // Check if existing state matches the schema's actual attributes from complete schema
+    if (schemaState?.attributes && schemaState.attributes.length > 0 && completeSchema) {
+      const schemaAttributes = completeSchema.attributes || {};
       const expectedAttributeNames = Object.keys(schemaAttributes);
       const existingAttributeNames = schemaState.attributes.map((attr) => attr.Attribute);
       
-      console.log("Attribute comparison:", {
+      console.log("Attribute comparison (UNIFIED):", {
         expectedAttributeNames,
         existingAttributeNames,
-        match: expectedAttributeNames.length === existingAttributeNames.length &&
-               expectedAttributeNames.every((name) => existingAttributeNames.includes(name))
+        match: expectedAttributeNames.every((name) => existingAttributeNames.includes(name))
       });
       
       // Check if existing state contains all expected attributes (and possibly more user-added ones)
@@ -176,23 +167,25 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
         initializedSchemaRef.current = currentSchemaId;
         return;
       }
-      // If some expected attributes are missing, fall through to re-initialize from OCA package
+      // If some expected attributes are missing, fall through to re-initialize from complete schema
     }
 
-    // Initialize from OCA package
-    if (schemaData) {
-      const schemaAttributes = schemaData.attributes || {};
+    // Initialize from complete schema (NEW UNIFIED APPROACH)
+    if (completeSchema) {
+      const schemaAttributes = completeSchema.attributes || {};
       const newAttributeRowData = Object.entries(schemaAttributes).map(([key, value]) => {
         // Check if this attribute has entry codes (is a list)
         const hasEntryCodes =
-          (schemaData.overlays?.entry &&
-            schemaData.overlays.entry.some(
+          (completeSchema.overlays?.entry &&
+            completeSchema.overlays.entry.some(
               (entryOverlay) =>
                 entryOverlay.attribute_entries && entryOverlay.attribute_entries[key]
             )) ||
-          (schemaData.overlays?.entry_code &&
-            schemaData.overlays.entry_code.attribute_entry_codes &&
-            schemaData.overlays.entry_code.attribute_entry_codes[key]);
+          (completeSchema.overlays?.entry_code &&
+            completeSchema.overlays.entry_code.some(
+              (entryOverlay) =>
+                entryOverlay.attribute_entry_codes && entryOverlay.attribute_entry_codes[key]
+            ));
 
         // Handle schema references (refs/refn) - these should be "Child Schema" not a type
         let displayType = value;
@@ -231,71 +224,20 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
         attributesList: Object.keys(schemaAttributes)
       });
 
-      // Update overlay context with schema's overlay data
-      if (schemaData.overlays) {
+      // Update overlay context with schema's overlay data (if needed)
+      if (completeSchema.overlays) {
         const newOverlay = { ...overlay };
-
-        // Import label overlays
-        if (schemaData.overlays.label && Array.isArray(schemaData.overlays.label)) {
-          const labelOverlays = {};
-          schemaData.overlays.label.forEach((labelOverlay) => {
-            const lang = labelOverlay.language;
-            if (lang) {
-              labelOverlays[lang] = labelOverlay.attribute_labels || {};
-            }
-          });
-          newOverlay.label = labelOverlays;
-        }
-
-        // Import other overlays
-        if (schemaData.overlays.unit) newOverlay.unit = schemaData.overlays.unit;
-        if (schemaData.overlays.cardinality)
-          newOverlay.cardinality = schemaData.overlays.cardinality;
-        if (schemaData.overlays.format) newOverlay.format = schemaData.overlays.format;
-        if (schemaData.overlays.character_encoding)
-          newOverlay.character_encoding = schemaData.overlays.character_encoding;
-        if (schemaData.overlays.conformance)
-          newOverlay.conformance = schemaData.overlays.conformance;
-
-        // Import entry overlays
-        if (schemaData.overlays.entry && Array.isArray(schemaData.overlays.entry)) {
-          const entryOverlays = {};
-          schemaData.overlays.entry.forEach((entryOverlay) => {
-            const lang = entryOverlay.language;
-            if (lang) {
-              entryOverlays[lang] = entryOverlay.attribute_entries || {};
-            }
-          });
-          newOverlay.entry = entryOverlays;
-        }
-
-        // Import entry_code overlays
-        if (schemaData.overlays.entry_code) {
-          newOverlay.entry_code = schemaData.overlays.entry_code;
-        }
-
-        // Avoid redundant overlay updates
-        try {
-          const prev = JSON.stringify(overlay || {});
-          const next = JSON.stringify(newOverlay);
-          if (prev !== next) {
-            setOverlay(newOverlay);
-          }
-        } catch (_e) {
-          setOverlay(newOverlay);
-        }
+        // Handle overlay updates if needed - simplified for unified approach
+        setOverlay(newOverlay);
       }
+
+      setLoading(false);
+      initializedSchemaRef.current = currentSchemaId;
     } else {
-      console.log("No schemaData found for currentSchemaId:", currentSchemaId);
-      // Initialize empty state
-      setAttributeRowData([]);
-      setAttributesList([]);
+      console.log("No completeSchema found for currentSchemaId:", currentSchemaId);
+      setLoading(false);
     }
-    
-    setLoading(false);
-    initializedSchemaRef.current = currentSchemaId;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSchemaId, OCAPackage, getSchemaState, updateSchemaState, i18n.language]);
+  }, [currentSchemaId, getCompleteSchema, getSchemaState, updateSchemaState]);
 
   // Intentionally removed continuous auto-sync to prevent flicker.
 

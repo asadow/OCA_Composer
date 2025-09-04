@@ -374,8 +374,8 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
     }
   }, [lanAttributeRowData, currentLanguage, currentSchemaId, updateSchemaState]);
 
-  // Refresh List data when currentLanguage changes
-  useEffect(() => {
+  // Memoized function to update List column data
+  const updateListColumn = useCallback(() => {
     if (!currentLanguage || !currentSchemaId) return;
 
     const schemaState = getSchemaState(currentSchemaId);
@@ -400,13 +400,17 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
         }
         
         return { ...row, List: listDisplay };
-      } else {
-        return { ...row, List: "Not a List" };
       }
+      return { ...row, List: "Not a List" };
     });
 
-    // Update schema state if data changed
-    if (JSON.stringify(updatedLangData) !== JSON.stringify(currentLangData)) {
+    // Only update if the List values actually changed (to prevent infinite loops)
+    const listDataChanged = currentLangData.some((row, index) => {
+      const newRow = updatedLangData[index];
+      return newRow && row.List !== newRow.List;
+    });
+
+    if (listDataChanged) {
       const updatedLanAttributeRowData = {
         ...schemaState.lanAttributeRowData,
         [currentLanguage]: updatedLangData
@@ -417,6 +421,11 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
       });
     }
   }, [currentLanguage, currentSchemaId, getSchemaState, updateSchemaState]);
+
+  // Refresh List data when currentLanguage changes
+  useEffect(() => {
+    updateListColumn();
+  }, [updateListColumn]);
 
   return (
     <div className="ag-theme-balham" style={{ width: 890 }}>

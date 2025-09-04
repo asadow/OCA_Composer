@@ -12,8 +12,31 @@ import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 // Create the multi-schema context
 const MultiSchemaContext = createContext();
 
-// Default schema state structure
+// Default schema state structure  
 const createDefaultSchemaState = () => ({
+  // Complete schema data (NEW: includes everything from OCA)
+  completeSchema: {
+    id: "",
+    metadata: {
+      name: "",
+      description: "",
+      languages: ["English"],
+      digest: ""
+    },
+    attributes: {}, // Raw attribute definitions from OCA
+    overlays: {
+      label: [],
+      unit: [],
+      cardinality: [],
+      format: [],
+      character_encoding: [],
+      conformance: [],
+      entry: [],
+      entry_code: []
+    }
+  },
+  
+  // User editing state (existing structure preserved)
   // Schema metadata
   metadata: {
     name: "",
@@ -683,6 +706,119 @@ export const MultiSchemaProvider = ({ children }) => {
     return null;
   }, [schemaNavigationHistory]);
 
+  // === NEW UNIFIED SCHEMA METHODS ===
+  
+  // Add complete schema from OCA package
+  const addSchemaFromOCA = useCallback((ocaPackage, schemaId) => {
+    if (!ocaPackage || !schemaId) return null;
+    
+    // Get complete schema data
+    const schemaData = getSchemaDataById(ocaPackage, schemaId);
+    if (!schemaData) return null;
+
+    // Create complete schema object
+    const completeSchema = {
+      id: schemaId,
+      metadata: {
+        name: schemaData.schemaName || schemaId,
+        description: schemaData.schemaDescription || "",
+        languages: schemaData.languages || ["English"],
+        digest: schemaData.digest || ""
+      },
+      attributes: schemaData.attributes || {},
+      overlays: schemaData.overlays || {}
+    };
+
+    // Get existing state or create default
+    const existingState = getSchemaState(schemaId);
+    
+    // If this is the first time initializing, use the existing initialization but add complete schema
+    if (!existingState.initialized) {
+      // First initialize using existing logic
+      initializeSchemaFromOCA(schemaId, ocaPackage);
+      
+      // Then immediately update with complete schema data
+      setSchemaStates((prev) => ({
+        ...prev,
+        [schemaId]: {
+          ...prev[schemaId],
+          completeSchema,
+          initialized: true
+        }
+      }));
+    } else {
+      // Just update the complete schema data
+      setSchemaStates((prev) => ({
+        ...prev,
+        [schemaId]: {
+          ...prev[schemaId],
+          completeSchema,
+          initialized: true
+        }
+      }));
+    }
+
+    return completeSchema;
+  }, [getSchemaState, initializeSchemaFromOCA]);
+
+  // Get complete schema (replaces getSchemaDataById calls)
+  const getCompleteSchema = useCallback((schemaId) => {
+    if (!schemaId) return null;
+    const state = getSchemaState(schemaId);
+    return state.completeSchema || null;
+  }, [getSchemaState]);
+
+  // Initialize multiple schemas from OCA package
+  const initializeFromOCAPackage = useCallback((ocaPackage) => {
+    if (!ocaPackage) return [];
+
+    const schemaIds = [];
+    
+    // Add root schema
+    if (ocaPackage.bundle) {
+      const rootId = ocaPackage.bundle.d;
+      if (rootId) {
+        addSchemaFromOCA(ocaPackage, rootId);
+        schemaIds.push(rootId);
+      }
+    }
+
+    // Add dependency schemas
+    if (ocaPackage.dependencies && Array.isArray(ocaPackage.dependencies)) {
+      ocaPackage.dependencies.forEach((dep) => {
+        if (dep.d) {
+          addSchemaFromOCA(ocaPackage, dep.d);
+          schemaIds.push(dep.d);
+        }
+      });
+    }
+
+    return schemaIds;
+  }, [addSchemaFromOCA]);
+
+  // Export schema to OCA format
+  const exportSchemaToOCA = useCallback((schemaId) => {
+    const state = getSchemaState(schemaId);
+    if (!state.completeSchema) return null;
+
+    // Merge complete schema with user edits
+    const { completeSchema } = state;
+    const userEdits = {
+      attributes: state.attributes,
+      overlays: state.overlays,
+      entryCodes: state.entryCodes
+    };
+
+    // TODO: Implement proper OCA export logic
+    // This would merge the complete schema with user edits
+    return {
+      ...completeSchema,
+      userEdits
+    };
+  }, [getSchemaState]);
+
+  // === END NEW UNIFIED SCHEMA METHODS ===
+
   // Persistence functions
   const saveToLocalStorage = useCallback(() => {
     if (!currentPackageId) return;
@@ -771,6 +907,12 @@ export const MultiSchemaProvider = ({ children }) => {
       getNavigationHistory,
       navigateBack,
 
+      // NEW: Unified schema methods
+      addSchemaFromOCA,
+      getCompleteSchema,
+      initializeFromOCAPackage,
+      exportSchemaToOCA,
+
       // Persistence
       saveToLocalStorage,
       loadFromLocalStorage,
@@ -796,6 +938,10 @@ export const MultiSchemaProvider = ({ children }) => {
       clearAllSchemas,
       getNavigationHistory,
       navigateBack,
+      addSchemaFromOCA,
+      getCompleteSchema,
+      initializeFromOCAPackage,
+      exportSchemaToOCA,
       saveToLocalStorage,
       loadFromLocalStorage
     ]
