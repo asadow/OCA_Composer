@@ -18,37 +18,35 @@ import Loading from "../components/Loading";
 const CharacterEncoding = () => {
   const { t } = useTranslation();
   const {
-    characterEncodingRowData: globalCharacterEncodingRowData,
     setCurrentPage,
     setSelectedOverlay,
-    setCharacterEncodingRowData: setGlobalCharacterEncodingRowData,
-    setOverlay,
-    editingSchemaId
+    setOverlay
   } = useContext(Context);
   
-  // MultiSchema context for schema-specific data
-  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  // Use simplified schema data hook
+  // Use MultiSchema context with standard pattern
+  const { activeSchemaId, editingSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  
   const currentSchemaId = activeSchemaId || editingSchemaId;
+  const schemaState = getSchemaState(currentSchemaId);
   
-  // Use schema-specific data when editing a schema, otherwise use global data
-  const currentSchemaState = getSchemaState(currentSchemaId);
-  const characterEncodingRowData = useMemo(() => 
-    currentSchemaId && currentSchemaState 
-      ? currentSchemaState.characterEncodingData || []
-      : globalCharacterEncodingRowData
-  , [currentSchemaId, currentSchemaState, globalCharacterEncodingRowData]);
-  
-  const setCharacterEncodingRowData = useCallback((newData) => {
+  const updateCurrentSchema = useCallback((updates) => {
     if (currentSchemaId) {
-      // Update MultiSchemaContext
-      updateSchemaState(currentSchemaId, {
-        characterEncodingData: newData
-      });
-    } else {
-      // Update global context
-      setGlobalCharacterEncodingRowData(newData);
+      updateSchemaState(currentSchemaId, updates);
     }
-  }, [currentSchemaId, updateSchemaState, setGlobalCharacterEncodingRowData]);
+  }, [currentSchemaId, updateSchemaState]);
+  
+  // Always get data from schema state - no fallback needed
+  const characterEncodingRowData = useMemo(() => 
+    schemaState?.characterEncodingData || []
+  , [schemaState?.characterEncodingData]);
+  
+  // Always update schema state - no dual logic needed
+  const setCharacterEncodingRowData = useCallback((newData) => {
+    updateCurrentSchema({
+      characterEncodingData: newData
+    });
+  }, [updateCurrentSchema]);
   
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);

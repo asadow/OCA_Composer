@@ -7,10 +7,13 @@ import { useMultiSchema } from "../context/MultiSchemaContext";
 export default function SchemaDescription({ currentLanguage }) {
   const { t } = useTranslation();
   const { schemaDescription, divisionGroup } = useContext(Context);
-  const { activeSchemaId, getSchemaState } = useMultiSchema();
+  // Use MultiSchema context with standard pattern
+  const { activeSchemaId, editingSchemaId, getSchemaState } = useMultiSchema();
+  
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  const schemaState = getSchemaState(currentSchemaId);
 
-  // Prefer current schema state's metadata if available
-  const schemaState = activeSchemaId ? getSchemaState(activeSchemaId) : null;
+  // Use current schema state's metadata
   const currentMeta = schemaState?.metadata || {};
   const metaForLang = currentMeta; // metadata stores display names (English/French)
 

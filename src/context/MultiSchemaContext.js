@@ -816,32 +816,3 @@ export const useMultiSchema = () => {
   }
   return context;
 };
-
-// Simplified hook for components that just need schema data
-export const useSchemaData = () => {
-  const { 
-    activeSchemaId, 
-    getSchemaState, 
-    updateSchemaState, 
-    getCurrentSchemaId 
-  } = useMultiSchema();
-  
-  // Get current schema ID (activeSchemaId or temp-schema)
-  const currentSchemaId = getCurrentSchemaId();
-  
-  // Get current schema state
-  const schemaState = getSchemaState(currentSchemaId);
-  
-  // Helper to update current schema
-  const updateCurrentSchema = useCallback((updates) => {
-    updateSchemaState(currentSchemaId, updates);
-  }, [currentSchemaId, updateSchemaState]);
-  
-  return {
-    currentSchemaId,
-    schemaState,
-    updateCurrentSchema,
-    isActiveSchema: Boolean(activeSchemaId),
-    isTempSchema: currentSchemaId === "temp-schema"
-  };
-};

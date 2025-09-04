@@ -13,33 +13,34 @@ const RequiredEntries = () => {
   const { t } = useTranslation();
   const {
     attributesList,
-    characterEncodingRowData: globalCharacterEncodingRowData,
     setCurrentPage,
     setSelectedOverlay,
-    setCharacterEncodingRowData: setGlobalCharacterEncodingRowData,
-    setOverlay,
-    editingSchemaId
+    setOverlay
   } = useContext(Context);
   
-  // MultiSchema context for schema-specific data
-  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
-  const currentSchemaId = activeSchemaId || editingSchemaId;
+  // Use simplified schema data hook
+  // Use MultiSchema context with standard pattern
+  const { activeSchemaId, editingSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
   
-  // Use schema-specific data when editing a schema, otherwise use global data
-  const currentSchemaState = getSchemaState(currentSchemaId);
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  const schemaState = getSchemaState(currentSchemaId);
+  
+  const updateCurrentSchema = useCallback((updates) => {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, updates);
+    }
+  }, [currentSchemaId, updateSchemaState]);
+  
+  // Always get data from schema state - no fallback needed
   const characterEncodingRowData = useMemo(() => 
-    currentSchemaId && currentSchemaState 
-      ? currentSchemaState.characterEncodingData || []
-      : globalCharacterEncodingRowData
-  , [currentSchemaId, currentSchemaState, globalCharacterEncodingRowData]);
+    schemaState?.characterEncodingData || []
+  , [schemaState?.characterEncodingData]);
   
   const setCharacterEncodingRowData = useCallback((newData) => {
-    if (currentSchemaId) {
-      updateSchemaState(currentSchemaId, { characterEncodingData: newData });
-    } else {
-      setGlobalCharacterEncodingRowData(newData);
-    }
-  }, [currentSchemaId, updateSchemaState, setGlobalCharacterEncodingRowData]);
+    updateCurrentSchema({
+      characterEncodingData: newData
+    });
+  }, [updateCurrentSchema]);
   
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [columnDefs, setColumnDefs] = useState([]);

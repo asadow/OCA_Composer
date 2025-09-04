@@ -10,7 +10,6 @@ import React, {
 import { useTranslation } from "react-i18next";
 import { AgGridReact } from "ag-grid-react";
 import { Context } from "../App";
-import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 import { useMultiSchema } from "../context/MultiSchemaContext";
 import CellHeader from "../components/CellHeader";
 import { greyCellStyle, gridStyles, preWrapWordBreak } from "../constants/styles";
@@ -83,20 +82,25 @@ const TextareaCellEditor = forwardRef((props, ref) => {
 export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
   const { t } = useTranslation();
 
-  // Multi-schema context
-  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  // Use MultiSchemaContext
+  const {
+    activeSchemaId,
+    editingSchemaId,
+    getSchemaState,
+    updateSchemaState
+  } = useMultiSchema();
+
+  const currentSchemaId = activeSchemaId || editingSchemaId;
 
   // Global context
-  const { languages, overlay, OCAPackage, editingSchemaId } = useContext(Context);
+  const { languages, overlay } = useContext(Context);
 
-  // Use MultiSchemaContext data if editing a specific schema, otherwise use global context
-  const schemaId = activeSchemaId || editingSchemaId;
-  const currentSchemaState = getSchemaState(schemaId) || {};
-  const attributesList = currentSchemaState.attributesList || [];
-  const lanAttributeRowData = currentSchemaState.lanAttributeRowData || {};
-  const attributeRowData = currentSchemaState.attributes || [];
-  const savedEntryCodes = currentSchemaState.entryCodes || {};
-  const attributesWithLists = currentSchemaState.attributesWithLists || [];
+  // Get schema state data with stable references
+  const schemaState = getSchemaState(currentSchemaId);
+  const attributesList = useMemo(() => schemaState?.attributesList || [], [schemaState?.attributesList]);
+  const lanAttributeRowData = useMemo(() => schemaState?.lanAttributeRowData || {}, [schemaState?.lanAttributeRowData]);
+  const attributeRowData = useMemo(() => schemaState?.attributes || [], [schemaState?.attributes]);
+  const attributesWithLists = useMemo(() => schemaState?.attributesWithLists || [], [schemaState?.attributesWithLists]);
 
   // Fallback: if attributesList not persisted for this schema yet, derive from attributes
   const effectiveAttributesList = useMemo(() => {
@@ -104,51 +108,49 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
     if (Array.isArray(attributeRowData) && attributeRowData.length > 0) {
       return attributeRowData.map((r) => r.Attribute);
     }
-    // Fallback to raw package when state hasn't been initialized for this schema
-    const schemaId = activeSchemaId;
-    if (OCAPackage && schemaId) {
-      const schemaData = getSchemaDataById(OCAPackage, schemaId);
-      if (schemaData && schemaData.attributes) {
-        return Object.keys(schemaData.attributes);
-      }
-    }
     return [];
-  }, [attributesList, attributeRowData, OCAPackage, schemaId]);
+  }, [attributesList, attributeRowData]);
 
   // Debug which schema/state this grid renders from
   useEffect(() => {
     // eslint-disable-next-line no-console
-    console.log("LanGrid: active schema", schemaId, {
+    console.log("LanGrid: schema state", {
+      currentSchemaId,
+      activeSchemaId,
+      editingSchemaId,
       attributesList,
       attributeRowDataLength: Array.isArray(attributeRowData) ? attributeRowData.length : 0,
       effectiveAttributesList
     });
-  }, [schemaId, attributesList, attributeRowData, effectiveAttributesList]);
+  }, [currentSchemaId, activeSchemaId, editingSchemaId, attributesList, attributeRowData, effectiveAttributesList]);
 
   // Sets Language Dependent Attribute row data
   useEffect(() => {
+    if (!currentSchemaId) return;
+    
+    // Get entry codes inside useEffect to avoid dependency issues
+    const currentSavedEntryCodes = getSchemaState(currentSchemaId)?.entryCodes || {};
+    
     // Recompute from scratch for the current schema to avoid leaking rows across schemas
     const newLanAttributeRowData = {};
 
-    // Build schema-scoped overlay maps (labels, entries, codes) for the active schema only
-    const schemaData = OCAPackage && schemaId ? getSchemaDataById(OCAPackage, schemaId) : null;
+    // Build schema-scoped overlay maps (labels, entries, codes) from overlay context
     const labelByLang = {};
     const entriesByLang = {};
-    let entryCodesByAttr = {};
-    if (schemaData && schemaData.overlays) {
-      if (Array.isArray(schemaData.overlays.label)) {
-        schemaData.overlays.label.forEach((lo) => {
-          if (lo && lo.language) labelByLang[lo.language] = lo.attribute_labels || {};
-        });
-      }
-      if (Array.isArray(schemaData.overlays.entry)) {
-        schemaData.overlays.entry.forEach((eo) => {
-          if (eo && eo.language) entriesByLang[eo.language] = eo.attribute_entries || {};
-        });
-      }
-      if (schemaData.overlays.entry_code) {
-        entryCodesByAttr = schemaData.overlays.entry_code.attribute_entry_codes || {};
-      }
+    
+    // Get entry codes from schema state (same as ViewSchema)
+    const entryCodesMap = currentSavedEntryCodes;
+    
+    // Use overlay data from context
+    if (overlay?.label) {
+      Object.keys(overlay.label).forEach((lang) => {
+        labelByLang[lang] = overlay.label[lang] || {};
+      });
+    }
+    if (overlay?.entry) {
+      Object.keys(overlay.entry).forEach((lang) => {
+        entriesByLang[lang] = overlay.entry[lang] || {};
+      });
     }
     languages.forEach((language) => {
       const overlayLang =
@@ -157,15 +159,40 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
         const newLanguageList = [];
         effectiveAttributesList.forEach((item) => {
           // Prefer saved entry codes (user edits) for List display; fallback to overlays
-          let listDisplayArray = (savedEntryCodes?.[item] || [])
-            .map((row) => row?.[language])
+          const overlayLangKey = languageNameToAlpha3Codes[`${language}`.toLowerCase()] || language;
+          let listDisplayArray = (currentSavedEntryCodes?.[item] || [])
+            .map((row) => row?.[overlayLangKey] || row?.[language])
             .filter((txt) => txt && txt.trim() !== "");
+          
+          if (item === 'q3' || item === 'q4') {
+            console.log(`LanGrid List Debug - ${item} DETAILED:`, {
+              language,
+              savedEntryCodesForItem: currentSavedEntryCodes?.[item],
+              firstRow: currentSavedEntryCodes?.[item]?.[0],
+              listDisplayArray
+            });
+          }
+          
           if (listDisplayArray.length === 0) {
-            const codes = entryCodesByAttr?.[item] || [];
-            const labelsMap = (entriesByLang?.[overlayLang]?.[item]) || {};
-            listDisplayArray = codes
-              .map((code) => labelsMap[code])
-              .filter((txt) => txt && txt.trim() !== "");
+            // Use same logic as ViewSchema - entryCodesMap contains arrays of objects
+            const codesForAttr = Array.isArray(entryCodesMap[item]) 
+              ? entryCodesMap[item] 
+              : [];
+            const overlayLangKey = languageNameToAlpha3Codes[`${language}`.toLowerCase()] || language;
+            const labelForLang = (row) =>
+              row[language] || row[overlayLangKey] || row.English || row.eng || row.Code;
+            listDisplayArray = codesForAttr
+              .map((row) => labelForLang(row))
+              .filter(Boolean);
+              
+            if (item === 'q3' || item === 'q4') {
+              console.log(`LanGrid List Debug - ${item} FALLBACK DETAILED:`, {
+                codesForAttr,
+                firstCodesRow: codesForAttr[0],
+                overlayLangKey,
+                listDisplayArray
+              });
+            }
           }
           const listDisplayString = listDisplayArray.join(" | ");
           let listDisplay = listDisplayString || "Not a List";
@@ -193,15 +220,21 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
           const newLabel = existingData ? existingData.Label : "";
           const newDescription = existingData ? existingData.Description : "";
           // Prefer saved entry codes (user edits) for List display; fallback to overlays
-          let listDisplayArray = (savedEntryCodes?.[item.Attribute] || [])
-            .map((row) => row?.[language])
+          const overlayLangKey = languageNameToAlpha3Codes[`${language}`.toLowerCase()] || language;
+          let listDisplayArray = (currentSavedEntryCodes?.[item.Attribute] || [])
+            .map((row) => row?.[overlayLangKey] || row?.[language])
             .filter((txt) => txt && txt.trim() !== "");
           if (listDisplayArray.length === 0) {
-            const codes = entryCodesByAttr?.[item.Attribute] || [];
-            const labelsMap = (entriesByLang?.[overlayLang]?.[item.Attribute]) || {};
-            listDisplayArray = codes
-              .map((code) => labelsMap[code])
-              .filter((txt) => txt && txt.trim() !== "");
+            // Use same logic as ViewSchema - entryCodesMap contains arrays of objects
+            const codesForAttr = Array.isArray(entryCodesMap[item.Attribute]) 
+              ? entryCodesMap[item.Attribute] 
+              : [];
+            const overlayLangKey = languageNameToAlpha3Codes[`${language}`.toLowerCase()] || language;
+            const labelForLang = (row) =>
+              row[language] || row[overlayLangKey] || row.English || row.eng || row.Code;
+            listDisplayArray = codesForAttr
+              .map((row) => labelForLang(row))
+              .filter(Boolean);
           }
           const listDisplayString = listDisplayArray.join(" | ");
           let listDisplay = listDisplayString || "Not a List";
@@ -223,21 +256,20 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
       }
     });
 
-    // Save to MultiSchemaContext for the active schema only
-    if (activeSchemaId) {
-      updateSchemaState(activeSchemaId, {
+    // Save to schema state
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, {
         lanAttributeRowData: newLanAttributeRowData
       });
     }
   }, [
     languages,
-    savedEntryCodes,
     attributeRowData,
     overlay,
-    activeSchemaId,
+    currentSchemaId,
     updateSchemaState,
     effectiveAttributesList,
-    lanAttributeRowData
+    getSchemaState
   ]);
 
   const [columnDefs, setColumnDefs] = useState([]);
@@ -300,7 +332,7 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
           attributesWithLists.includes(params.data.Attribute) ? {} : greyCellStyle
       }
     ]);
-  }, [effectiveAttributesList, t]);
+  }, [effectiveAttributesList, t, attributesWithLists]);
 
   const onCellKeyDown = (e) => {
     const keyPressed = e.event.code;
@@ -334,26 +366,76 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
         : row
     );
 
-    // Update MultiSchemaContext
-    if (schemaId) {
-      updateSchemaState(schemaId, {
+    // Update schema state
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, {
         lanAttributeRowData: updatedLanAttributeRowData
       });
     }
-  }, [lanAttributeRowData, currentLanguage, schemaId, updateSchemaState]);
+  }, [lanAttributeRowData, currentLanguage, currentSchemaId, updateSchemaState]);
+
+  // Refresh List data when currentLanguage changes
+  useEffect(() => {
+    if (!currentLanguage || !currentSchemaId) return;
+
+    const schemaState = getSchemaState(currentSchemaId);
+    const savedEntryCodes = schemaState?.entryCodes || {};
+    const currentLangData = schemaState?.lanAttributeRowData?.[currentLanguage] || [];
+    
+    // Update List column for current language
+    const updatedLangData = currentLangData.map((row) => {
+      const attrName = row.Attribute;
+      const entryCodesForAttr = savedEntryCodes[attrName] || [];
+      
+      if (entryCodesForAttr.length > 0) {
+        const listItems = entryCodesForAttr
+          .map((codeRow) => codeRow[currentLanguage] || codeRow.Code)
+          .filter(Boolean);
+        
+        let listDisplay = listItems.join(" | ") || "Not a List";
+        if (listItems.length > 3) {
+          const shown = listItems.slice(0, 3).join(" | ");
+          const remaining = listItems.length - 3;
+          listDisplay = `${shown} +${remaining} more`;
+        }
+        
+        return { ...row, List: listDisplay };
+      } else {
+        return { ...row, List: "Not a List" };
+      }
+    });
+
+    // Update schema state if data changed
+    if (JSON.stringify(updatedLangData) !== JSON.stringify(currentLangData)) {
+      const updatedLanAttributeRowData = {
+        ...schemaState.lanAttributeRowData,
+        [currentLanguage]: updatedLangData
+      };
+      
+      updateSchemaState(currentSchemaId, {
+        lanAttributeRowData: updatedLanAttributeRowData
+      });
+    }
+  }, [currentLanguage, currentSchemaId, getSchemaState, updateSchemaState]);
 
   return (
     <div className="ag-theme-balham" style={{ width: 890 }}>
       <style>{gridStyles}</style>
-      <AgGridReact
-        ref={gridRef}
-        rowData={lanAttributeRowData[currentLanguage]}
-        columnDefs={columnDefs}
-        onCellKeyDown={onCellKeyDown}
-        onCellValueChanged={onCellValueChanged}
-        domLayout="autoHeight"
-        onGridReady={onGridReady}
-      />
+      {lanAttributeRowData[currentLanguage] && lanAttributeRowData[currentLanguage].length > 0 ? (
+        <AgGridReact
+          ref={gridRef}
+          rowData={lanAttributeRowData[currentLanguage]}
+          columnDefs={columnDefs}
+          onCellKeyDown={onCellKeyDown}
+          onCellValueChanged={onCellValueChanged}
+          domLayout="autoHeight"
+          onGridReady={onGridReady}
+        />
+      ) : (
+        <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+          {t("No attributes available")}
+        </div>
+      )}
     </div>
   );
 }

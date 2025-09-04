@@ -11,7 +11,7 @@ import { Alert, Box, Typography } from "@mui/material";
 import Grid from "./Grid";
 import AddAttribute from "./AddAttribute";
 import { Context } from "../App";
-import { useMultiSchema, useSchemaData } from "../context/MultiSchemaContext";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import {
   removeSpacesFromString,
   removeSpacesFromArrayOfObjects
@@ -22,21 +22,26 @@ import { hasDisallowedChars } from "../constants/utils";
 import { FIELD_RANGE_OVERLAY } from "../constants/constants";
 import ErrorPopup from "../ViewSchema/ErrorPopup";
 import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
+import { toThreeLetterCode } from "../constants/isoCodes";
 
 const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  
+  // Get OCAPackage and overlay from App context
   const {
-    setAttributesWithLists,
-    setCurrentPage,
-    overlay,
-    setOverlay,
     OCAPackage,
-    editingSchemaId,
-    setAttributesList: setGlobalAttributesList
+    overlay,
+    setOverlay
   } = useContext(Context);
+  
+  // Use only MultiSchemaContext through useMultiSchema hook
+  const {
+    activeSchemaId,
+    editingSchemaId,
+    getSchemaState,
+    updateSchemaState
+  } = useMultiSchema();
 
-  // Use MultiSchemaContext for attribute data
-  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
   const currentSchemaId = activeSchemaId || editingSchemaId;
 
   // Local state for the current editing session
@@ -101,31 +106,80 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
   }, [currentSchemaId, overlay, setOverlay]);
 
   // Initialize or refresh data when switching to edit a schema
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!currentSchemaId) return;
     setLoading(true);
 
     const schemaState = getSchemaState(currentSchemaId);
+    
+    // Get current language code for schema data
+    const languageCode = toThreeLetterCode(i18n.language.split("-")[0]) || "eng";
+    const schemaData = getSchemaDataById(OCAPackage, currentSchemaId, languageCode);
 
-    // Always prefer existing state if present (captures user edits like new attributes/lists)
-    if (schemaState?.attributes && schemaState.attributes.length > 0) {
-      // Avoid redundant updates to prevent flicker
-      const sameAttrs =
-        JSON.stringify(attributeRowData) === JSON.stringify(schemaState.attributes);
-      const sameList =
-        JSON.stringify(attributesList) ===
-        JSON.stringify(schemaState.attributesList || []);
-      if (!sameAttrs) setAttributeRowData(schemaState.attributes);
-      if (!sameList) setAttributesList(schemaState.attributesList || []);
-      setLoading(false);
-      initializedSchemaRef.current = currentSchemaId;
-      return;
+    // Debug logging
+    console.log("AttributeDetails initialization:", {
+      currentSchemaId,
+      hasSchemaState: !!schemaState,
+      schemaStateAttributes: schemaState?.attributes?.length || 0,
+      hasSchemaData: !!schemaData,
+      schemaDataAttributes: schemaData?.attributes ? Object.keys(schemaData.attributes) : null
+    });
+
+    // Debug OCAPackage structure
+    console.log("OCAPackage debug:", {
+      hasOCAPackage: !!OCAPackage,
+      bundleDigest: OCAPackage?.bundle?.d,
+      hasDependencies: !!OCAPackage?.dependencies,
+      dependencyCount: OCAPackage?.dependencies?.length || 0,
+      dependencyDigests: OCAPackage?.dependencies?.map(dep => dep.d) || []
+    });
+
+    // Check if existing state matches the schema's actual attributes from OCA package
+    if (schemaState?.attributes && schemaState.attributes.length > 0 && schemaData) {
+      const schemaAttributes = schemaData.attributes || {};
+      const expectedAttributeNames = Object.keys(schemaAttributes);
+      const existingAttributeNames = schemaState.attributes.map((attr) => attr.Attribute);
+      
+      console.log("Attribute comparison:", {
+        expectedAttributeNames,
+        existingAttributeNames,
+        match: expectedAttributeNames.length === existingAttributeNames.length &&
+               expectedAttributeNames.every((name) => existingAttributeNames.includes(name))
+      });
+      
+      // Check if existing state contains all expected attributes (and possibly more user-added ones)
+      const hasAllExpectedAttributes = expectedAttributeNames.every((name) => 
+        existingAttributeNames.includes(name)
+      );
+        
+      if (hasAllExpectedAttributes) {
+        // Use existing state (preserves user-added attributes and edits)
+        // Avoid redundant updates to prevent flicker
+        const sameAttrs =
+          JSON.stringify(attributeRowData) === JSON.stringify(schemaState.attributes);
+        const sameList =
+          JSON.stringify(attributesList) ===
+          JSON.stringify(schemaState.attributesList || []);
+        
+        // If attributes don't match, merge carefully to preserve _rid values
+        if (!sameAttrs) {
+          const mergedAttributes = schemaState.attributes.map((schemaAttr) => {
+            const existingAttr = attributeRowData.find(existing => existing.Attribute === schemaAttr.Attribute);
+            // Preserve _rid if it exists in current data
+            return existingAttr?._rid ? { ...schemaAttr, _rid: existingAttr._rid } : schemaAttr;
+          });
+          setAttributeRowData(mergedAttributes);
+        }
+        
+        if (!sameList) setAttributesList(schemaState.attributesList || []);
+        setLoading(false);
+        initializedSchemaRef.current = currentSchemaId;
+        return;
+      }
+      // If some expected attributes are missing, fall through to re-initialize from OCA package
     }
 
-    // Otherwise, initialize from OCA package
-    const schemaData = getSchemaDataById(OCAPackage, currentSchemaId);
-
+    // Initialize from OCA package
     if (schemaData) {
       const schemaAttributes = schemaData.attributes || {};
       const newAttributeRowData = Object.entries(schemaAttributes).map(([key, value]) => {
@@ -231,16 +285,19 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
           setOverlay(newOverlay);
         }
       }
+    } else {
+      console.log("No schemaData found for currentSchemaId:", currentSchemaId);
+      // Initialize empty state
+      setAttributeRowData([]);
+      setAttributesList([]);
     }
+    
     setLoading(false);
-  }, [currentSchemaId, OCAPackage, getSchemaState, updateSchemaState]);
+    initializedSchemaRef.current = currentSchemaId;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSchemaId, OCAPackage, getSchemaState, updateSchemaState, i18n.language]);
 
   // Intentionally removed continuous auto-sync to prevent flicker.
-
-  // Keep global context in sync with local state
-  useEffect(() => {
-    setGlobalAttributesList(attributesList);
-  }, [attributesList, setGlobalAttributesList]);
 
   // Update canDelete when attributeRowData changes
   useEffect(() => {
@@ -251,6 +308,7 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
   useEffect(() => {
     const handleClickOutsideGrid = (event) => {
       if (
+        gridRef.current &&
         gridRef.current.api &&
         refContainer.current &&
         !refContainer.current.contains(event.target)
@@ -259,18 +317,23 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
       }
     };
 
-    document.addEventListener("click", handleClickOutsideGrid);
+    // Only add the event listener if the grid is loaded (not loading)
+    if (!loading) {
+      document.addEventListener("click", handleClickOutsideGrid);
+    }
 
     return () => {
       document.removeEventListener("click", handleClickOutsideGrid);
     };
-  }, [gridRef, refContainer]);
+  }, [gridRef, refContainer, loading]);
 
   const handleSave = () => {
     entryCodesRef.current = false;
     navigationSafe.current = false;
     typeBlanksRef.current = false;
-    gridRef.current.api.stopEditing();
+    if (gridRef.current && gridRef.current.api) {
+      gridRef.current.api.stopEditing();
+    }
 
     const validateForward = () => {
       const allAttributes = [];
@@ -349,7 +412,7 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
       const noSpacesArray = removeSpacesFromArrayOfObjects(newAttributeRowData);
       setAttributeRowData(noSpacesArray);
 
-      if (overlay[FIELD_RANGE_OVERLAY]?.selected) {
+      if (overlay && overlay[FIELD_RANGE_OVERLAY]?.selected) {
         const hasValidAttribute = noSpacesArray.some(
           (attribute) => attribute.Type === "Numeric" || attribute.Type === "DateTime"
         );
@@ -385,7 +448,15 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
         }
       });
 
-      setAttributesWithLists(newAttributesWithLists);
+      // Save attributesWithLists to schema state instead of global state
+      if (currentSchemaId) {
+        updateSchemaState(currentSchemaId, {
+          attributes: attributeRowData,
+          attributesList: validationResult,
+          attributesWithLists: newAttributesWithLists
+        });
+      }
+      
       if (newAttributesWithLists.length > 0) {
         entryCodesRef.current = true;
         // Entry Codes step already inserted centrally
@@ -416,7 +487,8 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
       if (typeBlanksRef.current === true) {
         setShowCard(true);
       } else if (entryCodesRef.current) {
-        setCurrentPage("Codes");
+        // Navigate to Codes page - this should be handled by the normal page flow
+        pageForward();
       } else {
         pageForward();
       }
@@ -465,19 +537,21 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
         </Alert>
       )}
       <div ref={refContainer}>
-        <Grid
-          gridRef={gridRef}
-          addButton1={addButton1}
-          addButton2={addButton2}
-          setErrorMessage={setErrorMessage}
-          canDelete={canDelete}
-          setCanDelete={setCanDelete}
-          setAddByTab={setAddByTab}
-          typesObjectRef={typesObjectRef}
-          setLoading={setLoading}
-          attributeRowData={attributeRowData}
-          setAttributeRowData={setAttributeRowData}
-        />
+        {!loading && (
+          <Grid
+            gridRef={gridRef}
+            addButton1={addButton1}
+            addButton2={addButton2}
+            setErrorMessage={setErrorMessage}
+            canDelete={canDelete}
+            setCanDelete={setCanDelete}
+            setAddByTab={setAddByTab}
+            typesObjectRef={typesObjectRef}
+            setLoading={setLoading}
+            attributeRowData={attributeRowData}
+            setAttributeRowData={setAttributeRowData}
+          />
+        )}
       </div>
       <AddAttribute
         addButton1={addButton1}

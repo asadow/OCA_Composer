@@ -5,7 +5,8 @@ import React, {
   useRef,
   forwardRef,
   useImperativeHandle,
-  useMemo
+  useMemo,
+  useCallback
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Typography } from "@mui/material";
@@ -29,41 +30,39 @@ const EntryCodes = forwardRef((props, ref) => {
   const [selectedAttributes, setSelectedAttributes] = useState({});
   const [selectedAttributesList, setSelectedAttributesList] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
-  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  // Use MultiSchema context with standard pattern
+  const { activeSchemaId, editingSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  const schemaState = getSchemaState(currentSchemaId);
+  
+  const updateCurrentSchema = useCallback((updates) => {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, updates);
+    }
+  }, [currentSchemaId, updateSchemaState]);
 
   // Global context
   const {
-    attributeRowData: globalAttributeRowData,
     entryCodeRowData: globalEntryCodeRowData,
     setEntryCodeRowData,
     setSavedEntryCodes,
-    attributesWithLists: globalAttributesWithLists,
     setCurrentPage,
     languages
   } = useContext(Context);
 
-  // Use MultiSchemaContext data if editing a specific schema, otherwise use global context
-  const currentSchemaState = getSchemaState(activeSchemaId);
+  // Use schema state data directly - no fallback needed
   const attributeRowData = useMemo(
-    () =>
-      activeSchemaId && currentSchemaState
-        ? currentSchemaState.attributes || []
-        : globalAttributeRowData,
-    [activeSchemaId, currentSchemaState, globalAttributeRowData]
+    () => schemaState?.attributes || [],
+    [schemaState?.attributes]
   );
   const entryCodeRowData = useMemo(
-    () =>
-      activeSchemaId && currentSchemaState
-        ? currentSchemaState.entryCodes || {}
-        : globalEntryCodeRowData,
-    [activeSchemaId, currentSchemaState, globalEntryCodeRowData]
+    () => schemaState?.entryCodes || {},
+    [schemaState?.entryCodes]
   );
   const attributesWithLists = useMemo(
-    () =>
-      activeSchemaId && currentSchemaState
-        ? currentSchemaState.attributesWithLists || []
-        : globalAttributesWithLists,
-    [activeSchemaId, currentSchemaState, globalAttributesWithLists]
+    () => schemaState?.attributesWithLists || [],
+    [schemaState?.attributesWithLists]
   );
   const [chosenTable, setChosenTable] = useState(0);
   const codeRefs = useRef();
@@ -124,11 +123,9 @@ const EntryCodes = forwardRef((props, ref) => {
       if (Object.keys(initialized).length === 0) return;
 
       // Update schema state
-      if (activeSchemaId) {
-        updateSchemaState(activeSchemaId, {
-          entryCodes: { ...entryCodeRowData, ...initialized }
-        });
-      }
+      updateCurrentSchema({
+        entryCodes: { ...entryCodeRowData, ...initialized }
+      });
 
       // Always update the visible grid rows too for immediate UI feedback
       const attributeArray = attrList;
@@ -143,12 +140,11 @@ const EntryCodes = forwardRef((props, ref) => {
       // silent
     }
   }, [
-    activeSchemaId,
     attributeRowData,
     entryCodeRowData,
     languages,
     overlay,
-    updateSchemaState,
+    updateCurrentSchema,
     setEntryCodeRowData
   ]);
 
@@ -287,12 +283,10 @@ const EntryCodes = forwardRef((props, ref) => {
       );
     });
 
-    // Save to MultiSchemaContext if editing a specific schema
-    if (activeSchemaId) {
-      updateSchemaState(activeSchemaId, {
-        entryCodes: newEntryCodesObject
-      });
-    }
+    // Save to schema state
+    updateCurrentSchema({
+      entryCodes: newEntryCodesObject
+    });
 
     // Also save to global context for compatibility
     setSavedEntryCodes(newEntryCodesObject);

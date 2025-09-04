@@ -1,4 +1,4 @@
-import React, { useRef, useContext, useState, useEffect, useCallback } from "react";
+import React, { useRef, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { Box, Button, Tooltip, Typography } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { useTranslation } from "react-i18next";
@@ -14,32 +14,53 @@ import { useMultiSchema } from "../context/MultiSchemaContext";
 
 export default function LanguageDetails({ pageBack, pageForward }) {
   const { t } = useTranslation();
-  // Multi-schema context
-  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
   
+  // Use MultiSchemaContext
+  const {
+    activeSchemaId,
+    editingSchemaId,
+    getSchemaState,
+    updateSchemaState
+  } = useMultiSchema();
+
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+
   // Global context
   const {
     languages,
-    lanAttributeRowData: globalLanAttributeRowData,
     setLanAttributeRowData,
-    attributesWithLists: globalAttributesWithLists,
     setCurrentPage
   } = useContext(Context);
 
-  // Use MultiSchemaContext data if editing a specific schema, otherwise use global context
-  const currentSchemaState = getSchemaState(activeSchemaId);
-  const lanAttributeRowData = activeSchemaId && currentSchemaState ? currentSchemaState.lanAttributeRowData || {} : globalLanAttributeRowData;
-  const attributesWithLists = activeSchemaId && currentSchemaState ? currentSchemaState.attributesWithLists || [] : globalAttributesWithLists;
+  // Get schema state data
+  const schemaState = getSchemaState(currentSchemaId);
+  const lanAttributeRowData = schemaState?.lanAttributeRowData || {};
+  const attributesWithLists = schemaState?.attributesWithLists || [];
 
   const languageIndex = languages.findIndex(
     (item) => codesToLanguages?.[i18next.language] === item
   );
-  const filteredLanguages = [...languages];
-  if (languageIndex !== -1 && languageIndex !== 0) {
-    const removedLanguage = filteredLanguages.splice(languageIndex, 1);
-    filteredLanguages.unshift(removedLanguage[0]);
-  }
+  const filteredLanguages = useMemo(() => {
+    const arr = [...languages];
+    if (languageIndex !== -1 && languageIndex !== 0) {
+      const removedLanguage = arr.splice(languageIndex, 1);
+      arr.unshift(removedLanguage[0]);
+    }
+    return arr;
+  }, [languages, languageIndex]);
+
   const [currentLanguage, setCurrentLanguage] = useState(filteredLanguages[0]);
+  
+  // Update currentLanguage when UI language changes
+  useEffect(() => {
+    const uiLanguageName = codesToLanguages?.[i18next.language];
+    if (uiLanguageName && languages.includes(uiLanguageName)) {
+      setCurrentLanguage(uiLanguageName);
+    } else {
+      setCurrentLanguage(filteredLanguages[0]);
+    }
+  }, [t, languages, filteredLanguages]); // Use 't' to track language changes
+
   const [loading, setLoading] = useState(true);
   const setLoadingIfChanged = useCallback((next) => {
     setLoading((prev) => (prev === next ? prev : next));
@@ -50,15 +71,16 @@ export default function LanguageDetails({ pageBack, pageForward }) {
 
   // Reset global language-dependent data when switching schemas to avoid stale rows from previous schema
   useEffect(() => {
-    if (activeSchemaId) {
+    if (currentSchemaId) {
       setLanAttributeRowData({});
     }
-  }, [activeSchemaId, setLanAttributeRowData]);
+  }, [currentSchemaId, setLanAttributeRowData]);
 
   // Stops grid editing when clicking outside grid
   useEffect(() => {
     const handleClickOutsideGrid = (event) => {
       if (
+        gridRef.current &&
         gridRef.current.api &&
         refContainer.current &&
         !refContainer.current.contains(event.target)
@@ -67,16 +89,21 @@ export default function LanguageDetails({ pageBack, pageForward }) {
       }
     };
 
-    document.addEventListener("click", handleClickOutsideGrid);
+    // Only add the event listener if the grid is loaded (not loading)
+    if (!loading) {
+      document.addEventListener("click", handleClickOutsideGrid);
+    }
 
     return () => {
       document.removeEventListener("click", handleClickOutsideGrid);
     };
-  }, [gridRef, refContainer]);
+  }, [gridRef, refContainer, loading]);
 
   const handleSave = () => {
     entryCodesRef.current = false;
-    gridRef.current.api.stopEditing();
+    if (gridRef.current && gridRef.current.api) {
+      gridRef.current.api.stopEditing();
+    }
     const newLanAttributeRowData = JSON.parse(JSON.stringify(lanAttributeRowData));
     const noSpacesObject = {};
     languages.forEach((language) => {
@@ -91,8 +118,8 @@ export default function LanguageDetails({ pageBack, pageForward }) {
     });
     
     // Save to MultiSchemaContext if editing a specific schema
-    if (activeSchemaId) {
-      updateSchemaState(activeSchemaId, {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, {
         lanAttributeRowData: noSpacesObject
       });
     }

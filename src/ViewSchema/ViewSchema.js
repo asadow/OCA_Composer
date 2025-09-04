@@ -71,7 +71,19 @@ export default function ViewSchema({
     }
     return arr;
   }, [languages, languageIndex]);
+  
+  // Make currentLanguage responsive to UI language changes
   const [currentLanguage, setCurrentLanguage] = useState(filteredLanguages[0]);
+  
+  // Update currentLanguage when UI language changes
+  useEffect(() => {
+    const uiLanguageName = codesToLanguages?.[i18next.language];
+    if (uiLanguageName && languages.includes(uiLanguageName)) {
+      setCurrentLanguage(uiLanguageName);
+    } else {
+      setCurrentLanguage(filteredLanguages[0]);
+    }
+  }, [t, languages, filteredLanguages]); // Use 't' to track language changes
   const [displayArray, setDisplayArray] = useState([]);
   const { resetToDefaults, exportDisabled } = useExportLogic();
   const {

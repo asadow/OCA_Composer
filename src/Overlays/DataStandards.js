@@ -13,33 +13,34 @@ import Loading from "../components/Loading";
 
 const DataStandards = () => {
   const {
-    dataStandardsRowData: globalDataStandardsRowData,
-    setDataStandardsRowData: setGlobalDataStandardsRowData,
     setCurrentPage,
     setSelectedOverlay,
-    setOverlay,
-    editingSchemaId
+    setOverlay
   } = useContext(Context);
   
-  // MultiSchema context for schema-specific data
-  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
-  const currentSchemaId = activeSchemaId || editingSchemaId;
+  // Use simplified schema data hook
+  // Use MultiSchema context with standard pattern
+  const { activeSchemaId, editingSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
   
-  // Use schema-specific data when editing a schema, otherwise use global data
-  const currentSchemaState = getSchemaState(currentSchemaId);
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  const schemaState = getSchemaState(currentSchemaId);
+  
+  const updateCurrentSchema = useCallback((updates) => {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, updates);
+    }
+  }, [currentSchemaId, updateSchemaState]);
+  
+  // Always get data from schema state - no fallback needed
   const dataStandardsRowData = useMemo(() => 
-    currentSchemaId && currentSchemaState 
-      ? currentSchemaState.dataStandardsData || []
-      : globalDataStandardsRowData
-  , [currentSchemaId, currentSchemaState, globalDataStandardsRowData]);
+    schemaState?.dataStandardsData || []
+  , [schemaState?.dataStandardsData]);
   
   const setDataStandardsRowData = useCallback((newData) => {
-    if (currentSchemaId) {
-      updateSchemaState(currentSchemaId, { dataStandardsData: newData });
-    } else {
-      setGlobalDataStandardsRowData(newData);
-    }
-  }, [currentSchemaId, updateSchemaState, setGlobalDataStandardsRowData]);
+    updateCurrentSchema({
+      dataStandardsData: newData
+    });
+  }, [updateCurrentSchema]);
   
   const { t } = useTranslation();
   const gridRef = useRef();

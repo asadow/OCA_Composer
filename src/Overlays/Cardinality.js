@@ -68,35 +68,32 @@ const Cardinality = () => {
     setSelectedOverlay,
     lanAttributeRowData,
     attributeRowData,
-    setCardinalityData: setGlobalCardinalityData,
-    cardinalityData: globalCardinalityData,
-    setOverlay,
-    editingSchemaId
+    setOverlay
   } = useContext(Context);
   
-  // MultiSchema context for schema-specific data
-  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
-  const currentSchemaId = activeSchemaId || editingSchemaId;
+  // Use simplified schema data hook
+  // Use MultiSchema context with standard pattern
+  const { activeSchemaId, editingSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
   
-  // Use schema-specific data when editing a schema, otherwise use global data
-  const currentSchemaState = getSchemaState(currentSchemaId);
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  const schemaState = getSchemaState(currentSchemaId);
+  
+  const updateCurrentSchema = useCallback((updates) => {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, updates);
+    }
+  }, [currentSchemaId, updateSchemaState]);
+  
+  // Always get data from schema state - no fallback needed
   const cardinalityData = useMemo(() => 
-    currentSchemaId && currentSchemaState 
-      ? currentSchemaState.cardinalityData || []
-      : globalCardinalityData
-  , [currentSchemaId, currentSchemaState, globalCardinalityData]);
+    schemaState?.cardinalityData || []
+  , [schemaState?.cardinalityData]);
     
   const setCardinalityData = useCallback((newData) => {
-    if (currentSchemaId) {
-      // Update MultiSchemaContext
-      updateSchemaState(currentSchemaId, {
-        cardinalityData: newData
-      });
-    } else {
-      // Update global context
-      setGlobalCardinalityData(newData);
-    }
-  }, [currentSchemaId, updateSchemaState, setGlobalCardinalityData]);
+    updateCurrentSchema({
+      cardinalityData: newData
+    });
+  }, [updateCurrentSchema]);
   
   const cardinalityRef = useRef();
   const [loading, setLoading] = useState(true);

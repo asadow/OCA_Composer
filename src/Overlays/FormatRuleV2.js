@@ -28,63 +28,46 @@ const FormatRulesV2 = () => {
   const {
     setCurrentPage,
     setSelectedOverlay,
-    formatRuleRowData: globalFormatRuleRowData,
-    characterEncodingRowData: globalCharacterEncodingRowData,
-    setCharacterEncodingRowData: setGlobalCharacterEncodingRowData,
-    setOverlay,
-    setFormatRuleRowData: setGlobalFormatRuleRowData,
-    rangeRowData: globalRangeRowData,
-    setRangeRowData: setGlobalRangeRowData,
-    editingSchemaId
+    setOverlay
   } = useContext(Context);
   
-  // MultiSchema context for schema-specific data
-  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
-  const currentSchemaId = activeSchemaId || editingSchemaId;
+  // Use simplified schema data hook
+  // Use MultiSchema context with standard pattern
+  const { activeSchemaId, editingSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
   
-  // Use schema-specific data when editing a schema, otherwise use global data
-  const currentSchemaState = getSchemaState(currentSchemaId);
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  const schemaState = getSchemaState(currentSchemaId);
+  
+  const updateCurrentSchema = useCallback((updates) => {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, updates);
+    }
+  }, [currentSchemaId, updateSchemaState]);
+  
+  // Always get data from schema state - no fallback needed
   const formatRuleRowData = useMemo(() => 
-    currentSchemaId && currentSchemaState 
-      ? currentSchemaState.formatRuleData || []
-      : globalFormatRuleRowData
-  , [currentSchemaId, currentSchemaState, globalFormatRuleRowData]);
+    schemaState?.formatRuleData || []
+  , [schemaState?.formatRuleData]);
   
   const characterEncodingRowData = useMemo(() => 
-    currentSchemaId && currentSchemaState 
-      ? currentSchemaState.characterEncodingData || []
-      : globalCharacterEncodingRowData
-  , [currentSchemaId, currentSchemaState, globalCharacterEncodingRowData]);
+    schemaState?.characterEncodingData || []
+  , [schemaState?.characterEncodingData]);
   
   const rangeRowData = useMemo(() => 
-    currentSchemaId && currentSchemaState 
-      ? currentSchemaState.rangeData || []
-      : globalRangeRowData
-  , [currentSchemaId, currentSchemaState, globalRangeRowData]);
+    schemaState?.rangeData || []
+  , [schemaState?.rangeData]);
   
   const setFormatRuleRowData = useCallback((newData) => {
-    if (currentSchemaId) {
-      updateSchemaState(currentSchemaId, { formatRuleData: newData });
-    } else {
-      setGlobalFormatRuleRowData(newData);
-    }
-  }, [currentSchemaId, updateSchemaState, setGlobalFormatRuleRowData]);
+    updateCurrentSchema({ formatRuleData: newData });
+  }, [updateCurrentSchema]);
   
   const setCharacterEncodingRowData = useCallback((newData) => {
-    if (currentSchemaId) {
-      updateSchemaState(currentSchemaId, { characterEncodingData: newData });
-    } else {
-      setGlobalCharacterEncodingRowData(newData);
-    }
-  }, [currentSchemaId, updateSchemaState, setGlobalCharacterEncodingRowData]);
+    updateCurrentSchema({ characterEncodingData: newData });
+  }, [updateCurrentSchema]);
   
   const setRangeRowData = useCallback((newData) => {
-    if (currentSchemaId) {
-      updateSchemaState(currentSchemaId, { rangeData: newData });
-    } else {
-      setGlobalRangeRowData(newData);
-    }
-  }, [currentSchemaId, updateSchemaState, setGlobalRangeRowData]);
+    updateCurrentSchema({ rangeData: newData });
+  }, [updateCurrentSchema]);
   
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [loading, setLoading] = useState(true);

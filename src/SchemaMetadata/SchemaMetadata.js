@@ -1,5 +1,5 @@
 import { Box, Button, Typography, Tooltip } from "@mui/material";
-import React, { useState, useContext, useEffect, useRef } from "react";
+import React, { useState, useContext, useEffect, useRef, useCallback } from "react";
 
 import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
@@ -27,8 +27,23 @@ export default function SchemaMetadata({
   const navigate = useNavigate();
   const { t } = useTranslation();
   
-  // MultiSchema context for schema-specific metadata
-  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  // Schema data hook
+  // Use MultiSchema context with standard pattern
+  const { 
+    activeSchemaId, 
+    editingSchemaId: multiSchemaEditingId, 
+    getSchemaState, 
+    updateSchemaState 
+  } = useMultiSchema();
+  
+  const currentSchemaId = activeSchemaId || multiSchemaEditingId;
+  const schemaState = getSchemaState(currentSchemaId);
+  
+  const updateCurrentSchema = useCallback((updates) => {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, updates);
+    }
+  }, [currentSchemaId, updateSchemaState]);
   
   // Local component state
   const [showLanguages, setShowLanguages] = useState(false);
@@ -48,42 +63,26 @@ export default function SchemaMetadata({
     editingSchemaId
   } = useContext(Context);
 
-  // Use schema-specific data when editing a schema, otherwise use global data
-  const currentSchemaId = activeSchemaId || editingSchemaId;
-  const currentSchemaState = getSchemaState(currentSchemaId);
-  
-  // Get schema description and languages from appropriate source
-  const schemaDescription = currentSchemaState?.metadata?.description || globalSchemaDescription;
-  const languages = currentSchemaState?.metadata?.languages || globalLanguages;
+  // Use schema state directly - no fallback needed
+  const schemaDescription = schemaState?.metadata?.description || globalSchemaDescription;
+  const languages = schemaState?.metadata?.languages || globalLanguages;
   
   const setSchemaDescription = (newDescription) => {
-    if (currentSchemaId) {
-      // Update MultiSchemaContext
-      updateSchemaState(currentSchemaId, {
-        metadata: {
-          ...currentSchemaState?.metadata,
-          description: newDescription
-        }
-      });
-    } else {
-      // Update global context for new schemas
-      setGlobalSchemaDescription(newDescription);
-    }
+    updateCurrentSchema({
+      metadata: {
+        ...schemaState?.metadata,
+        description: newDescription
+      }
+    });
   };
 
   const setLanguages = (newLanguages) => {
-    if (currentSchemaId) {
-      // Update MultiSchemaContext
-      updateSchemaState(currentSchemaId, {
-        metadata: {
-          ...currentSchemaState?.metadata,
-          languages: newLanguages
-        }
-      });
-    } else {
-      // Update global context for new schemas
-      // Note: Global language updates for new schemas should be handled by global context
-    }
+    updateCurrentSchema({
+      metadata: {
+        ...schemaState?.metadata,
+        languages: newLanguages
+      }
+    });
   };
 
   const toTitleCase = (str) =>
