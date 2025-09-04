@@ -87,13 +87,52 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
     activeSchemaId,
     editingSchemaId,
     getSchemaState,
-    updateSchemaState
+    updateSchemaState,
+    getCompleteSchema
   } = useMultiSchema();
 
   const currentSchemaId = activeSchemaId || editingSchemaId;
 
-  // Global context
-  const { languages, overlay } = useContext(Context);
+  // Global context (for languages and fallback overlay)
+  const { languages, overlay: globalOverlay } = useContext(Context);
+
+  // Get schema-specific overlay data from unified context, formatted for LanGrid
+  const overlay = useMemo(() => {
+    const completeSchema = getCompleteSchema(currentSchemaId);
+    const rawOverlays = completeSchema?.overlays;
+    
+    if (!rawOverlays) {
+      return globalOverlay || {};
+    }
+
+    // Transform OCA overlay format to LanGrid expected format
+    const transformedOverlay = {
+      label: {},
+      entry: {}
+    };
+
+    // Process label overlays
+    if (rawOverlays.label && Array.isArray(rawOverlays.label)) {
+      rawOverlays.label.forEach((labelOverlay) => {
+        const lang = labelOverlay.language;
+        if (lang && labelOverlay.attribute_labels) {
+          transformedOverlay.label[lang] = labelOverlay.attribute_labels;
+        }
+      });
+    }
+
+    // Process entry overlays
+    if (rawOverlays.entry && Array.isArray(rawOverlays.entry)) {
+      rawOverlays.entry.forEach((entryOverlay) => {
+        const lang = entryOverlay.language;
+        if (lang && entryOverlay.attribute_entries) {
+          transformedOverlay.entry[lang] = entryOverlay.attribute_entries;
+        }
+      });
+    }
+
+    return transformedOverlay;
+  }, [getCompleteSchema, currentSchemaId, globalOverlay]);
 
   // Get schema state data with stable references
   const schemaState = getSchemaState(currentSchemaId);
@@ -120,9 +159,11 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
       editingSchemaId,
       attributesList,
       attributeRowDataLength: Array.isArray(attributeRowData) ? attributeRowData.length : 0,
-      effectiveAttributesList
+      effectiveAttributesList,
+      hasOverlay: !!overlay,
+      overlayKeys: Object.keys(overlay || {})
     });
-  }, [currentSchemaId, activeSchemaId, editingSchemaId, attributesList, attributeRowData, effectiveAttributesList]);
+  }, [currentSchemaId, activeSchemaId, editingSchemaId, attributesList, attributeRowData, effectiveAttributesList, overlay]);
 
   // Sets Language Dependent Attribute row data
   useEffect(() => {
