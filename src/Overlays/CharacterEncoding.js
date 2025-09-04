@@ -17,15 +17,17 @@ import Loading from "../components/Loading";
 
 const CharacterEncoding = () => {
   const { t } = useTranslation();
-  const {
-    setCurrentPage,
-    setSelectedOverlay,
-    setOverlay
-  } = useContext(Context);
+  const { setCurrentPage } = useContext(Context);
   
-  // Use simplified schema data hook
   // Use MultiSchema context with standard pattern
-  const { activeSchemaId, editingSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  const { 
+    activeSchemaId, 
+    editingSchemaId, 
+    getSchemaState, 
+    updateSchemaState,
+    updateOverlaySelection,
+    setSelectedOverlay
+  } = useMultiSchema();
   
   const currentSchemaId = activeSchemaId || editingSchemaId;
   const schemaState = getSchemaState(currentSchemaId);
@@ -36,10 +38,20 @@ const CharacterEncoding = () => {
     }
   }, [currentSchemaId, updateSchemaState]);
   
-  // Always get data from schema state - no fallback needed
-  const characterEncodingRowData = useMemo(() => 
-    schemaState?.characterEncodingData || []
-  , [schemaState?.characterEncodingData]);
+  // Get character encoding data, initialize with attributes if empty
+  const characterEncodingRowData = useMemo(() => {
+    const existing = schemaState?.characterEncodingData;
+    if (existing && existing.length > 0) {
+      return existing;
+    }
+    
+    // Initialize with current schema attributes if no data exists
+    const attributes = schemaState?.attributes || [];
+    return attributes.map((attr) => ({
+      Attribute: attr.Attribute,
+      "Character Encoding": "utf-8" // default encoding
+    }));
+  }, [schemaState?.characterEncodingData, schemaState?.attributes]);
   
   // Always update schema state - no dual logic needed
   const setCharacterEncodingRowData = useCallback((newData) => {
@@ -85,34 +97,14 @@ const CharacterEncoding = () => {
 
   const handleForward = useCallback(() => {
     handleSave();
-    setSelectedOverlay("");
+    setSelectedOverlay(currentSchemaId, "");
     setCurrentPage("Overlays");
-  }, [handleSave, setCurrentPage, setSelectedOverlay]);
+  }, [handleSave, setCurrentPage, setSelectedOverlay, currentSchemaId]);
 
   const handleDeleteCurrentOverlay = useCallback(() => {
-    setOverlay((prev) => ({
-      ...prev,
-      "Character Encoding": {
-        ...prev["Character Encoding"],
-        selected: false
-      }
-    }));
-
-    // Delete attribute from characterEncodingRowData
-    const newCharacterEncodingRowData = characterEncodingRowData.map((row) => {
-      delete row["Character Encoding"];
-      return row;
-    });
-    setCharacterEncodingRowData(newCharacterEncodingRowData);
-    setSelectedOverlay("");
+    updateOverlaySelection(currentSchemaId, "Character Encoding", { selected: false });
     setCurrentPage("Overlays");
-  }, [
-    characterEncodingRowData,
-    setCharacterEncodingRowData,
-    setCurrentPage,
-    setOverlay,
-    setSelectedOverlay
-  ]);
+  }, [updateOverlaySelection, currentSchemaId, setCurrentPage]);
 
   const onGridReady = useCallback(() => {
     setLoading(false);

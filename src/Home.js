@@ -9,6 +9,14 @@ import LanguageDetails from "./LanguageDetails/LanguageDetails";
 import ViewSchema from "./ViewSchema/ViewSchema";
 import CreateManually from "./CreateManually/CreateManually";
 import Overlays from "./Overlays/Overlays";
+import CharacterEncoding from "./Overlays/CharacterEncoding";
+import RequiredEntries from "./Overlays/RequiredEntries";
+import Cardinality from "./Overlays/Cardinality";
+import UnitFraming from "./Overlays/UnitFraming";
+import DataStandards from "./Overlays/DataStandards";
+import Range from "./Overlays/Range";
+import AttributeFraming from "./Overlays/AttributeFraming";
+import FormatRuleV2 from "./Overlays/FormatRuleV2";
 import { Context } from "./App";
 import Header from "./Header/Header";
 import Footer from "./Footer/Footer";
@@ -336,6 +344,30 @@ const Home = ({
         {currentPage === "Create" && <CreateManually />}
         {currentPage === "Overlays" && (
           <Overlays pageBack={pageBack} pageForward={pageForward} />
+        )}
+        {currentPage === "CharacterEncoding" && (
+          <CharacterEncoding />
+        )}
+        {currentPage === "RequiredEntries" && (
+          <RequiredEntries />
+        )}
+        {currentPage === "Cardinality" && (
+          <Cardinality />
+        )}
+        {currentPage === "UnitFraming" && (
+          <UnitFraming />
+        )}
+        {currentPage === "DataStandards" && (
+          <DataStandards />
+        )}
+        {currentPage === "Range" && (
+          <Range />
+        )}
+        {currentPage === "AttributeFraming" && (
+          <AttributeFraming />
+        )}
+        {currentPage === "FormatRules" && (
+          <FormatRuleV2 />
         )}
       </Box>
       <Footer />

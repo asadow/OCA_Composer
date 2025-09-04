@@ -93,16 +93,16 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
 
   const currentSchemaId = activeSchemaId || editingSchemaId;
 
-  // Global context (for languages and fallback overlay)
-  const { languages, overlay: globalOverlay } = useContext(Context);
+  // Global context (for languages only)
+  const { languages } = useContext(Context);
 
   // Get schema-specific overlay data from unified context, formatted for LanGrid
-  const overlay = useMemo(() => {
+  const schemaOverlay = useMemo(() => {
     const completeSchema = getCompleteSchema(currentSchemaId);
     const rawOverlays = completeSchema?.overlays;
     
     if (!rawOverlays) {
-      return globalOverlay || {};
+      return {};
     }
 
     // Transform OCA overlay format to LanGrid expected format
@@ -132,7 +132,7 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
     }
 
     return transformedOverlay;
-  }, [getCompleteSchema, currentSchemaId, globalOverlay]);
+  }, [getCompleteSchema, currentSchemaId]);
 
   // Get schema state data with stable references
   const schemaState = getSchemaState(currentSchemaId);
@@ -160,10 +160,10 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
       attributesList,
       attributeRowDataLength: Array.isArray(attributeRowData) ? attributeRowData.length : 0,
       effectiveAttributesList,
-      hasOverlay: !!overlay,
-      overlayKeys: Object.keys(overlay || {})
+      hasSchemaOverlay: !!schemaOverlay,
+      schemaOverlayKeys: Object.keys(schemaOverlay || {})
     });
-  }, [currentSchemaId, activeSchemaId, editingSchemaId, attributesList, attributeRowData, effectiveAttributesList, overlay]);
+  }, [currentSchemaId, activeSchemaId, editingSchemaId, attributesList, attributeRowData, effectiveAttributesList, schemaOverlay]);
 
   // Sets Language Dependent Attribute row data
   useEffect(() => {
@@ -183,14 +183,14 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
     const entryCodesMap = currentSavedEntryCodes;
     
     // Use overlay data from context
-    if (overlay?.label) {
-      Object.keys(overlay.label).forEach((lang) => {
-        labelByLang[lang] = overlay.label[lang] || {};
+    if (schemaOverlay?.label) {
+      Object.keys(schemaOverlay.label).forEach((lang) => {
+        labelByLang[lang] = schemaOverlay.label[lang] || {};
       });
     }
-    if (overlay?.entry) {
-      Object.keys(overlay.entry).forEach((lang) => {
-        entriesByLang[lang] = overlay.entry[lang] || {};
+    if (schemaOverlay?.entry) {
+      Object.keys(schemaOverlay.entry).forEach((lang) => {
+        entriesByLang[lang] = schemaOverlay.entry[lang] || {};
       });
     }
     languages.forEach((language) => {
@@ -295,7 +295,7 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
   }, [
     languages,
     attributeRowData,
-    overlay,
+    schemaOverlay,
     currentSchemaId,
     updateSchemaState,
     effectiveAttributesList,

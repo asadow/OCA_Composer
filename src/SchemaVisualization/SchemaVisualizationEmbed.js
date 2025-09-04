@@ -147,14 +147,14 @@ const SchemaVisualizationEmbed = ({
   const generateLayout = useCallback(() => {
     const ocaPackage = getOCAPackage();
     if (!ocaPackage) {
-      console.log("SchemaVisualizationEmbed: generateLayout - No OCA package available");
+      // console.log("SchemaVisualizationEmbed: generateLayout - No OCA package available");
       return;
     }
-    console.log("SchemaVisualizationEmbed: generateLayout - Processing package:", {
-      dependencies: ocaPackage.dependencies?.length || 0,
-      dependencyIds: ocaPackage.dependencies?.map((d) => d.d) || [],
-      rootAttributes: Object.keys(ocaPackage.bundle?.capture_base?.attributes || {})
-    });
+    // console.log("SchemaVisualizationEmbed: generateLayout - Processing package:", {
+    //   dependencies: ocaPackage.dependencies?.length || 0,
+    //   dependencyIds: ocaPackage.dependencies?.map((d) => d.d) || [],
+    //   rootAttributes: Object.keys(ocaPackage.bundle?.capture_base?.attributes || {})
+    // });
 
     const languageCode = toThreeLetterCode(i18n.language.split("-")[0]) || "eng";
     const processedSchemaData = extractSchemaDataFromPackage(ocaPackage, languageCode);

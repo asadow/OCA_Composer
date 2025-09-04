@@ -44,7 +44,7 @@ const gridOptions = {
 const TrashCanButton = memo(
   forwardRef((props) => (
     <div>
-      {props.node.data?.Type.includes("Array") && (
+      {props.node.data?.Type?.includes("Array") && (
         <IconButton
           sx={{
             pr: 1,
@@ -65,15 +65,19 @@ const Cardinality = () => {
   const { t } = useTranslation();
   const {
     setCurrentPage,
-    setSelectedOverlay,
     lanAttributeRowData,
-    attributeRowData,
-    setOverlay
+    attributeRowData
   } = useContext(Context);
   
-  // Use simplified schema data hook
   // Use MultiSchema context with standard pattern
-  const { activeSchemaId, editingSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  const { 
+    activeSchemaId, 
+    editingSchemaId, 
+    getSchemaState, 
+    updateSchemaState,
+    updateOverlaySelection,
+    setSelectedOverlay
+  } = useMultiSchema();
   
   const currentSchemaId = activeSchemaId || editingSchemaId;
   const schemaState = getSchemaState(currentSchemaId);
@@ -103,6 +107,33 @@ const Cardinality = () => {
   const [minValue, setMinValue] = useState("");
   const [maxValue, setMaxValue] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
+
+  // Initialize cardinality data from schema attributes if not exists
+  useEffect(() => {
+    if (!schemaState?.cardinalityData && schemaState?.attributes) {
+      const newCardinalityData = schemaState.attributes.map((attr) => ({
+        Attribute: attr.Attribute,
+        Type: attr.Type || "Text",
+        EntryLimit: ""
+      }));
+      updateCurrentSchema({ cardinalityData: newCardinalityData });
+    } else if (schemaState?.cardinalityData && schemaState?.attributes) {
+      // Convert existing cardinalityData to component format if needed
+      const convertedData = schemaState.attributes.map((attr) => {
+        const existingCardinality = schemaState.cardinalityData.find((card) => card.Attribute === attr.Attribute);
+        return {
+          Attribute: attr.Attribute,
+          Type: attr.Type || "Text",
+          EntryLimit: existingCardinality?.Cardinality || ""
+        };
+      });
+      updateCurrentSchema({ cardinalityData: convertedData });
+    }
+    // Set loading to false once data is ready
+    if (schemaState?.cardinalityData || schemaState?.attributes) {
+      setLoading(false);
+    }
+  }, [schemaState?.attributes, schemaState?.cardinalityData, updateCurrentSchema]);
   const [dialogMessage, setDialogMessage] = useState("");
 
   const handleSave = useCallback(() => {
@@ -115,12 +146,12 @@ const Cardinality = () => {
 
   const handleForward = useCallback(() => {
     handleSave();
-    setSelectedOverlay("");
+    setSelectedOverlay(currentSchemaId, "");
     setCurrentPage("Overlays");
-  }, [handleSave, setCurrentPage, setSelectedOverlay]);
+  }, [handleSave, setCurrentPage, setSelectedOverlay, currentSchemaId]);
 
   const handleCellClick = useCallback((params) => {
-    if (params.data.Type.includes("Array")) {
+    if (params.data?.Type?.includes("Array")) {
       const entryLimit = params?.data.EntryLimit;
       const selectedDataToSave = { ...params?.data, rowIndex: params?.rowIndex };
 
@@ -129,7 +160,7 @@ const Cardinality = () => {
         entryLimit !== undefined &&
         params.colDef.field !== "Delete"
       ) {
-        if (entryLimit.includes("-")) {
+        if (entryLimit?.includes("-")) {
           const [MIN, MAX] = entryLimit.split("-").map((value) => value.trim());
           setSelectedCellData(selectedDataToSave);
           setExactValue("");
@@ -297,37 +328,17 @@ const Cardinality = () => {
     [handleDeleteRow, t]
   );
 
-  const handleDeleteCurrentOverlay = () => {
-    setOverlay((prev) => ({
-      ...prev,
-      Cardinality: {
-        ...prev.Cardinality,
-        selected: false
-      }
-    }));
-
-    const newCardinalityData = cardinalityData.map((row) => ({
-      ...row,
-      EntryLimit: ""
-    }));
-
-    setCardinalityData(newCardinalityData);
-    setSelectedOverlay("");
+  const handleDeleteCurrentOverlay = useCallback(() => {
+    updateOverlaySelection(currentSchemaId, "Cardinality", { selected: false });
     setCurrentPage("Overlays");
-  };
+  }, [updateOverlaySelection, currentSchemaId, setCurrentPage]);
 
   useEffect(() => {
-    // const flattenedData = Object.values(lanAttributeRowData).flatMap((languageData) =>
-    //   languageData.map((row) => ({
-    //     Attribute: row.Attribute,
-    //     Label: row.Label,
-    //     EntryLimit: row.EntryLimit,
-    //   }))
-    // );
-    const firstLanguage = Object.keys(lanAttributeRowData)?.[0];
+    // Use current UI language instead of first language
+    const currentLanguage = t("lng") === "fr" ? "French" : "English";
     const cardinalityDataCopy = [];
 
-    for (const item of lanAttributeRowData?.[firstLanguage] || []) {
+    for (const item of lanAttributeRowData?.[currentLanguage] || []) {
       const entity = cardinalityData?.find((row) => row.Attribute === item.Attribute);
       const typeAttribute = attributeRowData?.find(
         (row) => row.Attribute === item.Attribute
@@ -346,12 +357,12 @@ const Cardinality = () => {
     }
 
     setCardinalityData(cardinalityDataCopy);
-  }, [lanAttributeRowData, attributeRowData, cardinalityData, setCardinalityData]);
+  }, [lanAttributeRowData, attributeRowData, cardinalityData, setCardinalityData, t]);
 
   const rowClassRules = useMemo(
     () => ({
       "rag-grey-outer": function ragGreyOuter(params) {
-        return !params.data.Type.includes("Array");
+        return !params.data?.Type?.includes("Array");
       }
     }),
     []

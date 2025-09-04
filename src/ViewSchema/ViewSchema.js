@@ -204,7 +204,7 @@ export default function ViewSchema({
               const formatRuleIndex = new Map(
                 (schemaState.formatRuleData || []).map((r) => [
                   r.Attribute,
-                  r["Format Rule"]
+                  r["Format Rule"] || ""
                 ])
               );
 

@@ -5,6 +5,7 @@ import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import { Box, Button, List, ListItemButton, ListItemText } from "@mui/material";
 import CustomPalette from "../constants/customPalette";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import getListOfSelectedOverlays from "../constants/getListOfSelectedOverlays";
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import DeleteConfirmation from "./DeleteConfirmation";
@@ -13,16 +14,30 @@ import { FIELD_FORMAT_OVERLAY, FIELD_RANGE_OVERLAY } from "../constants/constant
 
 const Overlays = ({ pageBack, pageForward }) => {
   const { t } = useTranslation();
+  
+  // Global context (for non-schema-specific data)
   const {
     setCurrentPage,
     characterEncodingRowData,
     setCharacterEncodingRowData,
-    overlay,
-    setOverlay,
-    setSelectedOverlay,
     rangeRowData,
     attributeRowData
   } = useContext(Context);
+
+  // Schema-specific overlay state from MultiSchemaContext
+  const {
+    activeSchemaId,
+    editingSchemaId,
+    getOverlaySelections,
+    updateOverlaySelection,
+    setSelectedOverlay,
+    getSelectedOverlay
+  } = useMultiSchema();
+
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  const overlay = getOverlaySelections(currentSchemaId);
+  const selectedOverlay = getSelectedOverlay(currentSchemaId);
+  
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [selectedItemToDelete, setSelectedItemToDelete] = useState("");
 
@@ -34,12 +49,9 @@ const Overlays = ({ pageBack, pageForward }) => {
     if (shouldDisableRangeOverlay(item, selectedFeatures, attributeRowData, rangeRowData))
       return;
 
-    setOverlay((prev) => ({
-      ...prev,
-      [item]: { ...prev[item], selected: true }
-    }));
-
-    setSelectedOverlay(item);
+    updateOverlaySelection(currentSchemaId, item, { selected: true });
+    setSelectedOverlay(currentSchemaId, item);
+    
     if (item === "Character Encoding") {
       setCurrentPage("CharacterEncoding");
     } else if (item === "Make selected entries required") {
@@ -60,19 +72,12 @@ const Overlays = ({ pageBack, pageForward }) => {
   };
 
   const removeFromSelected = () => {
-    setOverlay((prev) => ({
-      ...prev,
-      [selectedItemToDelete]: {
-        ...prev[selectedItemToDelete],
-        selected: false
-      },
-      ...(selectedItemToDelete === FIELD_FORMAT_OVERLAY && {
-        [FIELD_RANGE_OVERLAY]: {
-          ...prev[FIELD_RANGE_OVERLAY],
-          selected: false
-        }
-      })
-    }));
+    updateOverlaySelection(currentSchemaId, selectedItemToDelete, { selected: false });
+    
+    // Also remove range overlay if format overlay is being removed
+    if (selectedItemToDelete === FIELD_FORMAT_OVERLAY) {
+      updateOverlaySelection(currentSchemaId, FIELD_RANGE_OVERLAY, { selected: false });
+    }
 
     // Delete attribute from characterEncodingRowData
     const newCharacterEncodingRowData = characterEncodingRowData.map((row) => {
@@ -84,7 +89,7 @@ const Overlays = ({ pageBack, pageForward }) => {
   };
 
   const handleEditOverlay = (overlayName) => {
-    setSelectedOverlay(overlayName);
+    setSelectedOverlay(currentSchemaId, overlayName);
     if (overlayName === "Character Encoding") {
       setCurrentPage("CharacterEncoding");
     } else if (overlayName === "Make selected entries required") {
@@ -158,7 +163,9 @@ const Overlays = ({ pageBack, pageForward }) => {
                 }
               }}
             >
-              {unselectedFeatures.map((text) => (
+              {unselectedFeatures
+                .filter((text) => text && text.trim() !== "") // Filter out empty/null features
+                .map((text) => (
                 <ListItemButton
                   key={text}
                   onClick={() => addToSelected(text)}

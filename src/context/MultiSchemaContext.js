@@ -8,6 +8,16 @@ import React, {
   useMemo
 } from "react";
 import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
+import {
+  FIELD_CHARACTER_ENCODING_OVERLAY,
+  FIELD_CONFORMANCE_OVERLAY,
+  FIELD_FORMAT_OVERLAY,
+  FIELD_CARDINALITY_OVERLAY,
+  FIELD_DATA_STANDARDS_OVERLAY,
+  FIELD_UNIT_FRAMING_OVERLAY,
+  FIELD_RANGE_OVERLAY,
+  FIELD_ATTRIBUTE_FRAMING_OVERLAY
+} from "../constants/constants";
 
 // Create the multi-schema context
 const MultiSchemaContext = createContext();
@@ -59,6 +69,18 @@ const createDefaultSchemaState = () => ({
   // Entry codes
   entryCodes: {},
   attributesWithLists: [],
+  // Overlay selection state (per-schema)
+  overlaySelections: {
+    [FIELD_CHARACTER_ENCODING_OVERLAY]: { feature: "Character Encoding", selected: false },
+    [FIELD_CONFORMANCE_OVERLAY]: { feature: "Make selected entries required", selected: false },
+    [FIELD_FORMAT_OVERLAY]: { feature: "Add format rule for data", selected: false },
+    [FIELD_CARDINALITY_OVERLAY]: { feature: "Cardinality", selected: false },
+    [FIELD_DATA_STANDARDS_OVERLAY]: { feature: "Data Standards", selected: false },
+    [FIELD_UNIT_FRAMING_OVERLAY]: { feature: "Unit Framing", selected: false },
+    [FIELD_RANGE_OVERLAY]: { feature: "Add range rule for data", selected: false },
+    [FIELD_ATTRIBUTE_FRAMING_OVERLAY]: { feature: "Attribute Framing", selected: false }
+  },
+  selectedOverlay: "",
   // Overlay-specific data
   characterEncodingData: [],
   formatRuleData: [],
@@ -399,6 +421,42 @@ export const MultiSchemaProvider = ({ children }) => {
       });
     }
 
+    // Initialize overlay selections based on which overlays are present in the schema
+    const overlaySelections = {
+      [FIELD_CHARACTER_ENCODING_OVERLAY]: { 
+        feature: "Character Encoding", 
+        selected: !!charEncodingOverlay?.attribute_character_encoding 
+      },
+      [FIELD_CONFORMANCE_OVERLAY]: { 
+        feature: "Make selected entries required", 
+        selected: !!conformanceOverlay?.attribute_conformance 
+      },
+      [FIELD_FORMAT_OVERLAY]: { 
+        feature: "Add format rule for data", 
+        selected: !!formatOverlay?.attribute_formats 
+      },
+      [FIELD_CARDINALITY_OVERLAY]: { 
+        feature: "Cardinality", 
+        selected: !!cardinalityOverlay?.attribute_cardinality 
+      },
+      [FIELD_DATA_STANDARDS_OVERLAY]: { 
+        feature: "Data Standards", 
+        selected: false 
+      },
+      [FIELD_UNIT_FRAMING_OVERLAY]: { 
+        feature: "Unit Framing", 
+        selected: !!unitOverlay?.attribute_units 
+      },
+      [FIELD_RANGE_OVERLAY]: { 
+        feature: "Add range rule for data", 
+        selected: false 
+      },
+      [FIELD_ATTRIBUTE_FRAMING_OVERLAY]: { 
+        feature: "Attribute Framing", 
+        selected: false 
+      }
+    };
+
     const newState = {
       metadata: {
         name: schemaData.schemaName || schemaId,
@@ -408,6 +466,7 @@ export const MultiSchemaProvider = ({ children }) => {
       attributes: attributesWithLists,
       attributesList: attributesWithLists.map((a) => a.Attribute),
       overlays: schemaData.overlays || {},
+      overlaySelections,
       entryCodes,
       attributesWithLists: attributesWithLists
         .filter((a) => a.List)
@@ -817,6 +876,46 @@ export const MultiSchemaProvider = ({ children }) => {
     };
   }, [getSchemaState]);
 
+  // === OVERLAY SELECTION METHODS ===
+  const getOverlaySelections = useCallback((schemaId) => {
+    const state = getSchemaState(schemaId);
+    // Return default overlay options if none exist yet
+    return state.overlaySelections || {
+      [FIELD_CHARACTER_ENCODING_OVERLAY]: { feature: "Character Encoding", selected: false },
+      [FIELD_CONFORMANCE_OVERLAY]: { feature: "Make selected entries required", selected: false },
+      [FIELD_FORMAT_OVERLAY]: { feature: "Add format rule for data", selected: false },
+      [FIELD_CARDINALITY_OVERLAY]: { feature: "Cardinality", selected: false },
+      [FIELD_DATA_STANDARDS_OVERLAY]: { feature: "Data Standards", selected: false },
+      [FIELD_UNIT_FRAMING_OVERLAY]: { feature: "Unit Framing", selected: false },
+      [FIELD_RANGE_OVERLAY]: { feature: "Add range rule for data", selected: false },
+      [FIELD_ATTRIBUTE_FRAMING_OVERLAY]: { feature: "Attribute Framing", selected: false }
+    };
+  }, [getSchemaState]);
+
+  const updateOverlaySelection = useCallback((schemaId, overlayKey, updates) => {
+    const currentSelections = getOverlaySelections(schemaId);
+    const updatedSelections = {
+      ...currentSelections,
+      [overlayKey]: {
+        ...currentSelections[overlayKey],
+        ...updates
+      }
+    };
+    
+    updateSchemaState(schemaId, { overlaySelections: updatedSelections });
+  }, [getOverlaySelections, updateSchemaState]);
+
+  const setSelectedOverlay = useCallback((schemaId, overlayKey) => {
+    updateSchemaState(schemaId, { selectedOverlay: overlayKey });
+  }, [updateSchemaState]);
+
+  const getSelectedOverlay = useCallback((schemaId) => {
+    const state = getSchemaState(schemaId);
+    return state.selectedOverlay || "";
+  }, [getSchemaState]);
+
+  // === END OVERLAY SELECTION METHODS ===
+
   // === END NEW UNIFIED SCHEMA METHODS ===
 
   // Persistence functions
@@ -913,6 +1012,12 @@ export const MultiSchemaProvider = ({ children }) => {
       initializeFromOCAPackage,
       exportSchemaToOCA,
 
+      // Overlay selection methods
+      getOverlaySelections,
+      updateOverlaySelection,
+      setSelectedOverlay,
+      getSelectedOverlay,
+
       // Persistence
       saveToLocalStorage,
       loadFromLocalStorage,
@@ -942,6 +1047,10 @@ export const MultiSchemaProvider = ({ children }) => {
       getCompleteSchema,
       initializeFromOCAPackage,
       exportSchemaToOCA,
+      getOverlaySelections,
+      updateOverlaySelection,
+      setSelectedOverlay,
+      getSelectedOverlay,
       saveToLocalStorage,
       loadFromLocalStorage
     ]

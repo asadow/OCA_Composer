@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { AgGridReact } from "ag-grid-react";
 import { Box, Tooltip } from "@mui/material";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import { greyCellStyle } from "../constants/styles";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-balham.css";
@@ -13,9 +14,12 @@ import {
   ADC,
   FIELD_RANGE_OVERLAY,
   FIELD_UNIT_FRAMING_OVERLAY,
+  FIELD_FORMAT_OVERLAY,
+  FIELD_CONFORMANCE_OVERLAY,
   MAX_ATTR_DESCRIPTION_CHARS,
   MAX_ATTR_LABEL_CHARS,
-  UNIT_FRAMING
+  UNIT_FRAMING,
+  CUSTOM_FORMAT_RULE
 } from "../constants/constants";
 import SelectedFeatureHeader from "./SelectedFeatureHeader";
 
@@ -93,7 +97,14 @@ export default function ViewGrid({
   setLoading = () => {}
 }) {
   const { t } = useTranslation();
-  const { overlay, cardinalityData, OCAPackage } = useContext(Context);
+  const { cardinalityData, OCAPackage } = useContext(Context);
+  
+  // Get overlay data from MultiSchemaContext
+  const { activeSchemaId, editingSchemaId, getOverlaySelections, getSchemaState, updateSchemaState } = useMultiSchema();
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  const overlay = getOverlaySelections(currentSchemaId);
+  const schemaState = getSchemaState(currentSchemaId);
+  
   const [columnDefs, setColumnDefs] = useState([]);
   const [rowData, setRowData] = useState([]);
 
@@ -109,6 +120,11 @@ export default function ViewGrid({
 
   useEffect(() => {
     const getColumns = () => {
+      // eslint-disable-next-line no-console
+      console.log("ViewGrid Debug - overlay:", overlay);
+      // eslint-disable-next-line no-console  
+      console.log("ViewGrid Debug - displayArray:", displayArray);
+      
       const predefinedColumns = [
         {
           field: "Attribute",
@@ -261,6 +277,29 @@ export default function ViewGrid({
             },
             cellRenderer: CheckboxRenderer
           });
+        } else if (feature === FIELD_CONFORMANCE_OVERLAY) {
+          // Handle Required column
+          predefinedColumns.push({
+            field: "Required",
+            width: 120,
+            autoHeight: true,
+            headerComponent: SelectedFeatureHeader,
+            headerComponentParams: {
+              feature
+            },
+            cellRenderer: CheckboxRenderer
+          });
+        } else if (feature === FIELD_FORMAT_OVERLAY) {
+          // Handle Format Rule column
+          predefinedColumns.push({
+            field: "Format Rule",
+            width: 160,
+            autoHeight: true,
+            headerComponent: SelectedFeatureHeader,
+            headerComponentParams: {
+              feature
+            }
+          });
         } else if (feature === FIELD_UNIT_FRAMING_OVERLAY) {
           let helpText = "";
           if (unitFramingOverlay?.framing_metadata) {
@@ -320,11 +359,22 @@ export default function ViewGrid({
     };
 
     setColumnDefs(getColumns());
-  }, [overlay, t]);
+  }, [overlay, t, displayArray, unitFramingOverlay?.framing_metadata]);
 
   useEffect(() => {
     const newRowData = JSON.parse(JSON.stringify(displayArray));
     const newCardinalityData = JSON.parse(JSON.stringify(cardinalityData));
+
+    // Initialize format rule data in schema state if overlay is selected but data doesn't exist
+    if (overlay && overlay[FIELD_FORMAT_OVERLAY]?.selected && !schemaState?.formatRuleData && newRowData.length > 0) {
+      const initialFormatRuleData = newRowData.map((item) => ({
+        Attribute: item.Attribute,
+        Type: item.Type || "Text",
+        "Format Rule": "",
+        [CUSTOM_FORMAT_RULE]: ""
+      }));
+      updateSchemaState(currentSchemaId, { formatRuleData: initialFormatRuleData });
+    }
 
     newRowData.forEach((item, index) => {
       // Add null checks to prevent errors
@@ -342,10 +392,37 @@ export default function ViewGrid({
       if (newCardinalityData[index] && newCardinalityData[index].EntryLimit) {
         item.Cardinality = newCardinalityData[index].EntryLimit;
       }
+      
+      // Add Required and Format Rule data from overlay selections
+      if (overlay) {
+        // Add Required field data
+        if (overlay[FIELD_CONFORMANCE_OVERLAY]?.selected) {
+          // Load required data from schema state
+          const requiredOverlayData = schemaState?.requiredOverlayData;
+          if (requiredOverlayData) {
+            const requiredItem = requiredOverlayData.find((req) => req.Attribute === item.Attribute);
+            item.Required = requiredItem ? requiredItem.Required : false;
+          } else {
+            item.Required = item.Required || false; // Default to false if not set
+          }
+        }
+        
+        // Add Format Rule field data
+        if (overlay[FIELD_FORMAT_OVERLAY]?.selected) {
+          // Load format rule data from schema state
+          const formatRuleData = schemaState?.formatRuleData;
+          if (formatRuleData) {
+            const formatRuleItem = formatRuleData.find((rule) => rule.Attribute === item.Attribute);
+            item["Format Rule"] = formatRuleItem ? formatRuleItem["Format Rule"] : "";
+          } else {
+            item["Format Rule"] = item["Format Rule"] || ""; // Default to empty if not set
+          }
+        }
+      }
     });
 
     setRowData(newRowData);
-  }, [displayArray, cardinalityData, currentLanguage]);
+  }, [displayArray, cardinalityData, currentLanguage, overlay, schemaState?.formatRuleData, schemaState?.requiredOverlayData, currentSchemaId, updateSchemaState]);
 
   return (
     <div className="ag-theme-balham" style={{ width: "100%" }}>
