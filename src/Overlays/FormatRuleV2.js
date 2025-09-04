@@ -3,6 +3,7 @@ import React, { useCallback, useContext, useMemo, useRef, useState } from "react
 import { AgGridReact } from "ag-grid-react";
 import { useTranslation } from "react-i18next";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import "ag-grid-community/styles/ag-theme-balham.css";
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import CellHeader from "../components/CellHeader";
@@ -27,14 +28,64 @@ const FormatRulesV2 = () => {
   const {
     setCurrentPage,
     setSelectedOverlay,
-    formatRuleRowData,
-    characterEncodingRowData,
-    setCharacterEncodingRowData,
+    formatRuleRowData: globalFormatRuleRowData,
+    characterEncodingRowData: globalCharacterEncodingRowData,
+    setCharacterEncodingRowData: setGlobalCharacterEncodingRowData,
     setOverlay,
-    setFormatRuleRowData,
-    rangeRowData,
-    setRangeRowData
+    setFormatRuleRowData: setGlobalFormatRuleRowData,
+    rangeRowData: globalRangeRowData,
+    setRangeRowData: setGlobalRangeRowData,
+    editingSchemaId
   } = useContext(Context);
+  
+  // MultiSchema context for schema-specific data
+  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  
+  // Use schema-specific data when editing a schema, otherwise use global data
+  const currentSchemaState = getSchemaState(currentSchemaId);
+  const formatRuleRowData = useMemo(() => 
+    currentSchemaId && currentSchemaState 
+      ? currentSchemaState.formatRuleData || []
+      : globalFormatRuleRowData
+  , [currentSchemaId, currentSchemaState, globalFormatRuleRowData]);
+  
+  const characterEncodingRowData = useMemo(() => 
+    currentSchemaId && currentSchemaState 
+      ? currentSchemaState.characterEncodingData || []
+      : globalCharacterEncodingRowData
+  , [currentSchemaId, currentSchemaState, globalCharacterEncodingRowData]);
+  
+  const rangeRowData = useMemo(() => 
+    currentSchemaId && currentSchemaState 
+      ? currentSchemaState.rangeData || []
+      : globalRangeRowData
+  , [currentSchemaId, currentSchemaState, globalRangeRowData]);
+  
+  const setFormatRuleRowData = useCallback((newData) => {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, { formatRuleData: newData });
+    } else {
+      setGlobalFormatRuleRowData(newData);
+    }
+  }, [currentSchemaId, updateSchemaState, setGlobalFormatRuleRowData]);
+  
+  const setCharacterEncodingRowData = useCallback((newData) => {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, { characterEncodingData: newData });
+    } else {
+      setGlobalCharacterEncodingRowData(newData);
+    }
+  }, [currentSchemaId, updateSchemaState, setGlobalCharacterEncodingRowData]);
+  
+  const setRangeRowData = useCallback((newData) => {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, { rangeData: newData });
+    } else {
+      setGlobalRangeRowData(newData);
+    }
+  }, [currentSchemaId, updateSchemaState, setGlobalRangeRowData]);
+  
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [loading, setLoading] = useState(true);
   const gridRef = useRef();
@@ -188,7 +239,7 @@ const FormatRulesV2 = () => {
         })
       }
     ],
-    []
+    [t]
   );
 
   const onGridReady = useCallback(() => {

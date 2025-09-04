@@ -26,6 +26,7 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { useTranslation } from "react-i18next";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-balham.css";
@@ -67,10 +68,36 @@ const Cardinality = () => {
     setSelectedOverlay,
     lanAttributeRowData,
     attributeRowData,
-    setCardinalityData,
-    cardinalityData,
-    setOverlay
+    setCardinalityData: setGlobalCardinalityData,
+    cardinalityData: globalCardinalityData,
+    setOverlay,
+    editingSchemaId
   } = useContext(Context);
+  
+  // MultiSchema context for schema-specific data
+  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  
+  // Use schema-specific data when editing a schema, otherwise use global data
+  const currentSchemaState = getSchemaState(currentSchemaId);
+  const cardinalityData = useMemo(() => 
+    currentSchemaId && currentSchemaState 
+      ? currentSchemaState.cardinalityData || []
+      : globalCardinalityData
+  , [currentSchemaId, currentSchemaState, globalCardinalityData]);
+    
+  const setCardinalityData = useCallback((newData) => {
+    if (currentSchemaId) {
+      // Update MultiSchemaContext
+      updateSchemaState(currentSchemaId, {
+        cardinalityData: newData
+      });
+    } else {
+      // Update global context
+      setGlobalCardinalityData(newData);
+    }
+  }, [currentSchemaId, updateSchemaState, setGlobalCardinalityData]);
+  
   const cardinalityRef = useRef();
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -322,11 +349,11 @@ const Cardinality = () => {
     }
 
     setCardinalityData(cardinalityDataCopy);
-  }, [lanAttributeRowData, attributeRowData]);
+  }, [lanAttributeRowData, attributeRowData, cardinalityData, setCardinalityData]);
 
   const rowClassRules = useMemo(
     () => ({
-      "rag-grey-outer": function (params) {
+      "rag-grey-outer": function ragGreyOuter(params) {
         return !params.data.Type.includes("Array");
       }
     }),

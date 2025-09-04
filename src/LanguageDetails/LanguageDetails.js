@@ -48,6 +48,13 @@ export default function LanguageDetails({ pageBack, pageForward }) {
   const refContainer = useRef();
   const entryCodesRef = useRef();
 
+  // Reset global language-dependent data when switching schemas to avoid stale rows from previous schema
+  useEffect(() => {
+    if (activeSchemaId) {
+      setLanAttributeRowData({});
+    }
+  }, [activeSchemaId, setLanAttributeRowData]);
+
   // Stops grid editing when clicking outside grid
   useEffect(() => {
     const handleClickOutsideGrid = (event) => {

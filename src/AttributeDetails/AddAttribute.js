@@ -6,6 +6,7 @@ import AddCircleIcon from "@mui/icons-material/AddCircle";
 import AddIcon from "@mui/icons-material/Add";
 import { useTranslation } from "react-i18next";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import { removeSpacesFromString } from "../constants/removeSpaces";
 import CustomPalette from "../constants/customPalette";
 
@@ -25,6 +26,7 @@ export default function AddAttribute({
 }) {
   const { t } = useTranslation();
   const { setAttributesList } = useContext(Context);
+  const { activeSchemaId, updateSchemaState } = useMultiSchema();
   const [newAttribute, setNewAttribute] = useState("");
 
   const handleLanguageField = (e) => {
@@ -91,16 +93,27 @@ export default function AddAttribute({
       }
       setAttributesList([...newAttributesList, attributeToAdd]);
       setShowAddAttribute(false);
-      setAttributeRowData([
-        ...newAttributeRowData,
-        {
-          Attribute: attributeToAdd,
-          Flagged: false,
-          List: false,
-          Type: "",
-          Unit: ""
-        }
-      ]);
+      const newAttributeObj = {
+        Attribute: attributeToAdd,
+        Type: "",
+        Description: "",
+        Required: false,
+        EntryCodes: [],
+        List: false,
+        Flagged: false,
+        Unit: ""
+      };
+      const updatedAttributeRowData = [...newAttributeRowData, newAttributeObj];
+      setAttributeRowData(updatedAttributeRowData);
+      
+      // Also save to MultiSchemaContext to prevent data loss when List is toggled
+      if (activeSchemaId) {
+        updateSchemaState(activeSchemaId, {
+          attributes: updatedAttributeRowData,
+          attributesList: [...newAttributesList, attributeToAdd]
+        });
+      }
+      
       setCanDelete(true);
       setNewAttribute("");
     } else if (blanks) {

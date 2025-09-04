@@ -1,8 +1,9 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { Box } from "@mui/material";
 import { AgGridReact } from "ag-grid-react";
 import { useTranslation } from "react-i18next";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import { flexCenter, gridStyles, preWrapWordBreak } from "../constants/styles";
 import CellHeader from "../components/CellHeader";
@@ -12,12 +13,34 @@ const RequiredEntries = () => {
   const { t } = useTranslation();
   const {
     attributesList,
-    characterEncodingRowData,
+    characterEncodingRowData: globalCharacterEncodingRowData,
     setCurrentPage,
     setSelectedOverlay,
-    setCharacterEncodingRowData,
+    setCharacterEncodingRowData: setGlobalCharacterEncodingRowData,
     setOverlay,
+    editingSchemaId
   } = useContext(Context);
+  
+  // MultiSchema context for schema-specific data
+  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  
+  // Use schema-specific data when editing a schema, otherwise use global data
+  const currentSchemaState = getSchemaState(currentSchemaId);
+  const characterEncodingRowData = useMemo(() => 
+    currentSchemaId && currentSchemaState 
+      ? currentSchemaState.characterEncodingData || []
+      : globalCharacterEncodingRowData
+  , [currentSchemaId, currentSchemaState, globalCharacterEncodingRowData]);
+  
+  const setCharacterEncodingRowData = useCallback((newData) => {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, { characterEncodingData: newData });
+    } else {
+      setGlobalCharacterEncodingRowData(newData);
+    }
+  }, [currentSchemaId, updateSchemaState, setGlobalCharacterEncodingRowData]);
+  
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [columnDefs, setColumnDefs] = useState([]);
   const gridRef = useRef();

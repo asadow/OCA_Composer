@@ -1,6 +1,5 @@
-import { React, useCallback, useContext, useState } from "react";
+import { React, useCallback, useState } from "react";
 import { MenuItem } from "@mui/material";
-import { Context } from "../App";
 import { DropdownMenuList } from "../components/DropdownMenuCell";
 import { displayValues } from "../constants/constants";
 
@@ -53,9 +52,7 @@ export const CharacterEncodingTypeRenderer = (props) => {
   );
 };
 
-const useCharacterEncodingType = (gridRef) => {
-  const { characterEncodingRowData, setCharacterEncodingRowData } = useContext(Context);
-
+const useCharacterEncodingType = (gridRef, characterEncodingRowData, setCharacterEncodingRowData) => {
   const handleSave = useCallback(() => {
     gridRef.current.api.stopEditing();
     const attributeWithCharacterEncoding = gridRef.current.api

@@ -159,15 +159,15 @@ const SchemaVisualizationEmbed = ({
     const languageCode = toThreeLetterCode(i18n.language.split("-")[0]) || "eng";
     const processedSchemaData = extractSchemaDataFromPackage(ocaPackage, languageCode);
     if (!processedSchemaData) {
-      console.log(
-        "SchemaVisualizationEmbed: generateLayout - Failed to extract schema data"
-      );
+      // console.log(
+      //   "SchemaVisualizationEmbed: generateLayout - Failed to extract schema data"
+      // );
       return;
     }
-    console.log("SchemaVisualizationEmbed: generateLayout - Extracted data:", {
-      attributes: Object.keys(processedSchemaData.attributes || {}),
-      dependencies: processedSchemaData.dependencies?.length || 0
-    });
+    // console.log("SchemaVisualizationEmbed: generateLayout - Extracted data:", {
+    //   attributes: Object.keys(processedSchemaData.attributes || {}),
+    //   dependencies: processedSchemaData.dependencies?.length || 0
+    // });
     let result;
     try {
       // Get the schema name - prioritize the actual schema name over generic "Parent Schema"

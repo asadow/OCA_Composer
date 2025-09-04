@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useRef, useState } from "react";
+import React, { useContext, useMemo, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 import { AgGridReact } from "ag-grid-react";
@@ -7,17 +7,40 @@ import CellHeader from "../components/CellHeader";
 import DataStandardAutocompleteEditor from "./DataStandards/DataStandardAutocompleteEditor";
 import BackNextSkeleton from "../components/BackNextSkeleton";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import DeleteConfirmation from "./DeleteConfirmation";
 import Loading from "../components/Loading";
 
 const DataStandards = () => {
   const {
-    dataStandardsRowData,
-    setDataStandardsRowData,
+    dataStandardsRowData: globalDataStandardsRowData,
+    setDataStandardsRowData: setGlobalDataStandardsRowData,
     setCurrentPage,
     setSelectedOverlay,
     setOverlay,
+    editingSchemaId
   } = useContext(Context);
+  
+  // MultiSchema context for schema-specific data
+  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  
+  // Use schema-specific data when editing a schema, otherwise use global data
+  const currentSchemaState = getSchemaState(currentSchemaId);
+  const dataStandardsRowData = useMemo(() => 
+    currentSchemaId && currentSchemaState 
+      ? currentSchemaState.dataStandardsData || []
+      : globalDataStandardsRowData
+  , [currentSchemaId, currentSchemaState, globalDataStandardsRowData]);
+  
+  const setDataStandardsRowData = useCallback((newData) => {
+    if (currentSchemaId) {
+      updateSchemaState(currentSchemaId, { dataStandardsData: newData });
+    } else {
+      setGlobalDataStandardsRowData(newData);
+    }
+  }, [currentSchemaId, updateSchemaState, setGlobalDataStandardsRowData]);
+  
   const { t } = useTranslation();
   const gridRef = useRef();
 

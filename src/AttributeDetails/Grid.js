@@ -77,6 +77,18 @@ export default function Grid({
 
   const dropRefs = useRef(attributeRowData.map(() => React.createRef()));
 
+  // Ensure stable row ids so rows don't disappear when toggling List or editing
+  useEffect(() => {
+    const missingId = attributeRowData.some((r) => !r._rid);
+    if (!missingId) return;
+    const stamped = Date.now();
+    const next = attributeRowData.map((r, i) =>
+      r._rid ? r : { ...r, _rid: `${stamped}_${i}` }
+    );
+    setAttributeRowData(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attributeRowData]);
+
   useEffect(() => {
     dropRefs.current = attributeRowData.map(() => React.createRef());
   }, [attributesList, attributeRowData]);
@@ -158,13 +170,12 @@ export default function Grid({
         },
         cellRenderer: CheckboxRenderer,
         cellRendererParams: {
-          onToggleList: (attributeName, checked) => {
-            setAttributeRowData((prev) => {
-              const next = prev.map((row) =>
+          onLocalToggle: (attributeName, checked) => {
+            setAttributeRowData((prev) =>
+              prev.map((row) =>
                 row.Attribute === attributeName ? { ...row, List: checked } : row
-              );
-              return next;
-            });
+              )
+            );
           }
         },
         checkboxSelection: false,
@@ -600,6 +611,7 @@ export default function Grid({
         <style>{gridStyle}</style>
         <AgGridReact
           ref={gridRef}
+          getRowId={(params) => (params.data && (params.data._rid || params.data.Attribute))}
           rowData={attributeRowData}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}

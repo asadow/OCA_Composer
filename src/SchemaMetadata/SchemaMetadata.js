@@ -12,6 +12,7 @@ import LanguageSelection from "./LanguageSelection";
 import NavigationCard from "../constants/NavigationCard";
 import CustomPalette from "../constants/customPalette";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import { removeSpacesFromObjectOfObjects } from "../constants/removeSpaces";
 import IntroCard from "./IntroCard";
 import IsoCard from "./IsoCard";
@@ -25,19 +26,65 @@ export default function SchemaMetadata({
 }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  
+  // MultiSchema context for schema-specific metadata
+  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  
+  // Local component state
   const [showLanguages, setShowLanguages] = useState(false);
   const [showCard, setShowCard] = useState(false);
   const [fieldArray, setFieldArray] = useState([]);
   const [showIsoInput, setShowIsoInput] = useState(false);
   const [editingLanguage, setEditingLanguage] = useState("");
+  
+  // Global context for app-level state
   const {
-    schemaDescription,
-    setSchemaDescription,
-    languages,
+    schemaDescription: globalSchemaDescription,
+    setSchemaDescription: setGlobalSchemaDescription,
+    languages: globalLanguages,
     history,
     setHistory,
-    setCurrentPage
+    setCurrentPage,
+    editingSchemaId
   } = useContext(Context);
+
+  // Use schema-specific data when editing a schema, otherwise use global data
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  const currentSchemaState = getSchemaState(currentSchemaId);
+  
+  // Get schema description and languages from appropriate source
+  const schemaDescription = currentSchemaState?.metadata?.description || globalSchemaDescription;
+  const languages = currentSchemaState?.metadata?.languages || globalLanguages;
+  
+  const setSchemaDescription = (newDescription) => {
+    if (currentSchemaId) {
+      // Update MultiSchemaContext
+      updateSchemaState(currentSchemaId, {
+        metadata: {
+          ...currentSchemaState?.metadata,
+          description: newDescription
+        }
+      });
+    } else {
+      // Update global context for new schemas
+      setGlobalSchemaDescription(newDescription);
+    }
+  };
+
+  const setLanguages = (newLanguages) => {
+    if (currentSchemaId) {
+      // Update MultiSchemaContext
+      updateSchemaState(currentSchemaId, {
+        metadata: {
+          ...currentSchemaState?.metadata,
+          languages: newLanguages
+        }
+      });
+    } else {
+      // Update global context for new schemas
+      // Note: Global language updates for new schemas should be handled by global context
+    }
+  };
 
   const toTitleCase = (str) =>
     str.toLowerCase().replace(/^(.)|\s(.)/g, (match) => match.toUpperCase());
@@ -152,6 +199,10 @@ export default function SchemaMetadata({
                   setShowLanguages={setShowLanguages}
                   setEditingLanguage={setEditingLanguage}
                   setShowIsoInput={setShowIsoInput}
+                  languages={languages}
+                  setLanguages={setLanguages}
+                  schemaDescription={schemaDescription}
+                  setSchemaDescription={setSchemaDescription}
                 />
               )}
             </Box>
@@ -191,6 +242,7 @@ export default function SchemaMetadata({
         <Description
           setShowIsoInput={setShowIsoInput}
           setEditingLanguage={setEditingLanguage}
+          languages={languages}
         />
       </Box>
     </BackNextSkeleton>

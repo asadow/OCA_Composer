@@ -76,28 +76,60 @@ export const MultiSchemaProvider = ({ children }) => {
   const saveTimerRef = useRef(null);
   const lastSavedState = useRef({});
 
-  // Get state for a specific schema
+  // Constants for special schema IDs
+  const TEMP_SCHEMA_ID = "temp-schema";
+
+  // Get state for a specific schema - auto-create temp schemas
   const getSchemaState = useCallback(
-    (schemaId) => schemaStates[schemaId] || createDefaultSchemaState(),
+    (schemaId) => {
+      // If no schemaId provided, use temp schema
+      const targetId = schemaId || TEMP_SCHEMA_ID;
+      
+      // Return existing schema state or create default
+      return schemaStates[targetId] || createDefaultSchemaState();
+    },
     [schemaStates]
   );
 
-  // Update state for a specific schema
+  // Update state for a specific schema - auto-create if needed
   const updateSchemaState = useCallback(
     (schemaId, updates) => {
+      // If no schemaId provided, use temp schema
+      const targetId = schemaId || TEMP_SCHEMA_ID;
+      
       setSchemaStates((prev) => ({
         ...prev,
-        [schemaId]: {
-          ...getSchemaState(schemaId),
+        [targetId]: {
+          ...getSchemaState(targetId),
           ...updates
         }
       }));
 
       // Mark schema as modified
-      setModifiedSchemas((prev) => new Set([...prev, schemaId]));
+      setModifiedSchemas((prev) => new Set([...prev, targetId]));
     },
     [getSchemaState]
   );
+
+  // Get current working schema ID (with fallback to temp)
+  const getCurrentSchemaId = useCallback(() => 
+    activeSchemaId || TEMP_SCHEMA_ID
+  , [activeSchemaId]);
+
+  // Switch to a schema or create temp if none specified
+  const ensureSchemaExists = useCallback((schemaId) => {
+    const targetId = schemaId || TEMP_SCHEMA_ID;
+    
+    // Initialize schema if it doesn't exist
+    if (!schemaStates[targetId]) {
+      setSchemaStates((prev) => ({
+        ...prev,
+        [targetId]: createDefaultSchemaState()
+      }));
+    }
+    
+    return targetId;
+  }, [schemaStates]);
 
   // Track deleted attributes
   const addDeletedAttributes = useCallback((schemaId, attributeNames) => {
@@ -726,6 +758,8 @@ export const MultiSchemaProvider = ({ children }) => {
       // Actions
       getSchemaState,
       updateSchemaState,
+      getCurrentSchemaId,
+      ensureSchemaExists,
       addDeletedAttributes,
       getDeletedAttributes,
       initializeSchemaFromOCA,
@@ -750,6 +784,8 @@ export const MultiSchemaProvider = ({ children }) => {
       currentPackageId,
       getSchemaState,
       updateSchemaState,
+      getCurrentSchemaId,
+      ensureSchemaExists,
       addDeletedAttributes,
       getDeletedAttributes,
       initializeSchemaFromOCA,
@@ -779,4 +815,33 @@ export const useMultiSchema = () => {
     throw new Error("useMultiSchema must be used within a MultiSchemaProvider");
   }
   return context;
+};
+
+// Simplified hook for components that just need schema data
+export const useSchemaData = () => {
+  const { 
+    activeSchemaId, 
+    getSchemaState, 
+    updateSchemaState, 
+    getCurrentSchemaId 
+  } = useMultiSchema();
+  
+  // Get current schema ID (activeSchemaId or temp-schema)
+  const currentSchemaId = getCurrentSchemaId();
+  
+  // Get current schema state
+  const schemaState = getSchemaState(currentSchemaId);
+  
+  // Helper to update current schema
+  const updateCurrentSchema = useCallback((updates) => {
+    updateSchemaState(currentSchemaId, updates);
+  }, [currentSchemaId, updateSchemaState]);
+  
+  return {
+    currentSchemaId,
+    schemaState,
+    updateCurrentSchema,
+    isActiveSchema: Boolean(activeSchemaId),
+    isTempSchema: currentSchemaId === "temp-schema"
+  };
 };

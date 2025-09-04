@@ -3,10 +3,12 @@ import { useTranslation } from "react-i18next";
 import { MenuItem } from "@mui/material";
 import { DropdownMenuList } from "../components/DropdownMenuCell";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 
 const TypeRenderer = ({ data, attributeRowData, typesObjectRef, dropRefs, setAttributeRowData }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { t } = useTranslation();
+  const { activeSchemaId, updateSchemaState, getSchemaState } = useMultiSchema();
   
   const displayValues = [
     { value: "", label: "" },
@@ -62,6 +64,13 @@ const TypeRenderer = ({ data, attributeRowData, typesObjectRef, dropRefs, setAtt
     });
     setAttributeRowData(updatedAttributeRowData);
     
+    // Update MultiSchemaContext to persist the change
+    if (activeSchemaId) {
+      updateSchemaState(activeSchemaId, {
+        attributes: updatedAttributeRowData
+      });
+    }
+    
     setIsDropdownOpen(false);
   };
 
@@ -91,6 +100,13 @@ const TypeRenderer = ({ data, attributeRowData, typesObjectRef, dropRefs, setAtt
         return item;
       });
       setAttributeRowData(updatedAttributeRowData);
+      
+      // Update MultiSchemaContext to persist the change
+      if (activeSchemaId) {
+        updateSchemaState(activeSchemaId, {
+          attributes: updatedAttributeRowData
+        });
+      }
     }
   };
 

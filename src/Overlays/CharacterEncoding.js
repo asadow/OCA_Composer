@@ -3,6 +3,7 @@ import React, { useCallback, useContext, useMemo, useRef, useState } from "react
 import { AgGridReact } from "ag-grid-react";
 import { useTranslation } from "react-i18next";
 import { Context } from "../App";
+import { useMultiSchema } from "../context/MultiSchemaContext";
 import "ag-grid-community/styles/ag-theme-balham.css";
 import useCharacterEncodingType, {
   CharacterEncodingTypeRenderer
@@ -17,16 +18,42 @@ import Loading from "../components/Loading";
 const CharacterEncoding = () => {
   const { t } = useTranslation();
   const {
-    characterEncodingRowData,
+    characterEncodingRowData: globalCharacterEncodingRowData,
     setCurrentPage,
     setSelectedOverlay,
-    setCharacterEncodingRowData,
-    setOverlay
+    setCharacterEncodingRowData: setGlobalCharacterEncodingRowData,
+    setOverlay,
+    editingSchemaId
   } = useContext(Context);
+  
+  // MultiSchema context for schema-specific data
+  const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
+  const currentSchemaId = activeSchemaId || editingSchemaId;
+  
+  // Use schema-specific data when editing a schema, otherwise use global data
+  const currentSchemaState = getSchemaState(currentSchemaId);
+  const characterEncodingRowData = useMemo(() => 
+    currentSchemaId && currentSchemaState 
+      ? currentSchemaState.characterEncodingData || []
+      : globalCharacterEncodingRowData
+  , [currentSchemaId, currentSchemaState, globalCharacterEncodingRowData]);
+  
+  const setCharacterEncodingRowData = useCallback((newData) => {
+    if (currentSchemaId) {
+      // Update MultiSchemaContext
+      updateSchemaState(currentSchemaId, {
+        characterEncodingData: newData
+      });
+    } else {
+      // Update global context
+      setGlobalCharacterEncodingRowData(newData);
+    }
+  }, [currentSchemaId, updateSchemaState, setGlobalCharacterEncodingRowData]);
+  
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const gridRef = useRef();
-  const { handleSave, applyAllFunc } = useCharacterEncodingType(gridRef);
+  const { handleSave, applyAllFunc } = useCharacterEncodingType(gridRef, characterEncodingRowData, setCharacterEncodingRowData);
 
   const columnDefs = useMemo(() => [
       {

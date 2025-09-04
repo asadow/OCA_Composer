@@ -4,11 +4,13 @@ import React, {
   useContext,
   useImperativeHandle,
   forwardRef,
-  useCallback
+  useCallback,
+  useMemo
 } from "react";
 import { useTranslation } from "react-i18next";
 import { AgGridReact } from "ag-grid-react";
 import { Context } from "../App";
+import { getSchemaDataById } from "../SchemaVisualization/dataUtils";
 import { useMultiSchema } from "../context/MultiSchemaContext";
 import CellHeader from "../components/CellHeader";
 import { greyCellStyle, gridStyles, preWrapWordBreak } from "../constants/styles";
@@ -85,56 +87,82 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
   const { activeSchemaId, getSchemaState, updateSchemaState } = useMultiSchema();
 
   // Global context
-  const {
-    attributesList: globalAttributesList,
-    lanAttributeRowData: globalLanAttributeRowData,
-    setLanAttributeRowData,
-    attributeRowData: globalAttributeRowData,
-    savedEntryCodes: globalSavedEntryCodes,
-    attributesWithLists: globalAttributesWithLists,
-    languages,
-    overlay
-  } = useContext(Context);
+  const { languages, overlay, OCAPackage, editingSchemaId } = useContext(Context);
 
   // Use MultiSchemaContext data if editing a specific schema, otherwise use global context
-  const currentSchemaState = getSchemaState(activeSchemaId);
-  const attributesList =
-    activeSchemaId && currentSchemaState
-      ? currentSchemaState.attributesList || []
-      : globalAttributesList;
-  const lanAttributeRowData =
-    activeSchemaId && currentSchemaState
-      ? currentSchemaState.lanAttributeRowData || {}
-      : globalLanAttributeRowData;
-  const attributeRowData =
-    activeSchemaId && currentSchemaState
-      ? currentSchemaState.attributes || []
-      : globalAttributeRowData;
-  const savedEntryCodes =
-    activeSchemaId && currentSchemaState
-      ? currentSchemaState.entryCodes || {}
-      : globalSavedEntryCodes;
-  const attributesWithLists =
-    activeSchemaId && currentSchemaState
-      ? currentSchemaState.attributesWithLists || []
-      : globalAttributesWithLists;
+  const schemaId = activeSchemaId || editingSchemaId;
+  const currentSchemaState = getSchemaState(schemaId) || {};
+  const attributesList = currentSchemaState.attributesList || [];
+  const lanAttributeRowData = currentSchemaState.lanAttributeRowData || {};
+  const attributeRowData = currentSchemaState.attributes || [];
+  const savedEntryCodes = currentSchemaState.entryCodes || {};
+  const attributesWithLists = currentSchemaState.attributesWithLists || [];
+
+  // Fallback: if attributesList not persisted for this schema yet, derive from attributes
+  const effectiveAttributesList = useMemo(() => {
+    if (Array.isArray(attributesList) && attributesList.length > 0) return attributesList;
+    if (Array.isArray(attributeRowData) && attributeRowData.length > 0) {
+      return attributeRowData.map((r) => r.Attribute);
+    }
+    // Fallback to raw package when state hasn't been initialized for this schema
+    const schemaId = activeSchemaId;
+    if (OCAPackage && schemaId) {
+      const schemaData = getSchemaDataById(OCAPackage, schemaId);
+      if (schemaData && schemaData.attributes) {
+        return Object.keys(schemaData.attributes);
+      }
+    }
+    return [];
+  }, [attributesList, attributeRowData, OCAPackage, schemaId]);
+
+  // Debug which schema/state this grid renders from
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log("LanGrid: active schema", schemaId, {
+      attributesList,
+      attributeRowDataLength: Array.isArray(attributeRowData) ? attributeRowData.length : 0,
+      effectiveAttributesList
+    });
+  }, [schemaId, attributesList, attributeRowData, effectiveAttributesList]);
 
   // Sets Language Dependent Attribute row data
   useEffect(() => {
-    const newLanAttributeRowData = JSON.parse(JSON.stringify(lanAttributeRowData));
+    // Recompute from scratch for the current schema to avoid leaking rows across schemas
+    const newLanAttributeRowData = {};
+
+    // Build schema-scoped overlay maps (labels, entries, codes) for the active schema only
+    const schemaData = OCAPackage && schemaId ? getSchemaDataById(OCAPackage, schemaId) : null;
+    const labelByLang = {};
+    const entriesByLang = {};
+    let entryCodesByAttr = {};
+    if (schemaData && schemaData.overlays) {
+      if (Array.isArray(schemaData.overlays.label)) {
+        schemaData.overlays.label.forEach((lo) => {
+          if (lo && lo.language) labelByLang[lo.language] = lo.attribute_labels || {};
+        });
+      }
+      if (Array.isArray(schemaData.overlays.entry)) {
+        schemaData.overlays.entry.forEach((eo) => {
+          if (eo && eo.language) entriesByLang[eo.language] = eo.attribute_entries || {};
+        });
+      }
+      if (schemaData.overlays.entry_code) {
+        entryCodesByAttr = schemaData.overlays.entry_code.attribute_entry_codes || {};
+      }
+    }
     languages.forEach((language) => {
       const overlayLang =
         languageNameToAlpha3Codes[`${language}`.toLowerCase()] || language;
       if (!newLanAttributeRowData[language]) {
         const newLanguageList = [];
-        attributesList.forEach((item) => {
+        effectiveAttributesList.forEach((item) => {
           // Prefer saved entry codes (user edits) for List display; fallback to overlays
           let listDisplayArray = (savedEntryCodes?.[item] || [])
             .map((row) => row?.[language])
             .filter((txt) => txt && txt.trim() !== "");
           if (listDisplayArray.length === 0) {
-            const codes = overlay?.entry_code?.attribute_entry_codes?.[item] || [];
-            const labelsMap = overlay?.entry?.[overlayLang]?.[item] || {};
+            const codes = entryCodesByAttr?.[item] || [];
+            const labelsMap = (entriesByLang?.[overlayLang]?.[item]) || {};
             listDisplayArray = codes
               .map((code) => labelsMap[code])
               .filter((txt) => txt && txt.trim() !== "");
@@ -148,7 +176,7 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
           }
           newLanguageList.push({
             Attribute: item,
-            Label: overlay?.label?.[overlayLang]?.[item] || "",
+            Label: (labelByLang?.[overlayLang]?.[item]) || "",
             Description: "",
             List: listDisplay
           });
@@ -169,9 +197,8 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
             .map((row) => row?.[language])
             .filter((txt) => txt && txt.trim() !== "");
           if (listDisplayArray.length === 0) {
-            const codes =
-              overlay?.entry_code?.attribute_entry_codes?.[item.Attribute] || [];
-            const labelsMap = overlay?.entry?.[overlayLang]?.[item.Attribute] || {};
+            const codes = entryCodesByAttr?.[item.Attribute] || [];
+            const labelsMap = (entriesByLang?.[overlayLang]?.[item.Attribute]) || {};
             listDisplayArray = codes
               .map((code) => labelsMap[code])
               .filter((txt) => txt && txt.trim() !== "");
@@ -186,7 +213,7 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
 
           const newObj = {
             Attribute: item.Attribute,
-            Label: newLabel || overlay?.label?.[overlayLang]?.[item.Attribute] || "",
+            Label: newLabel || (labelByLang?.[overlayLang]?.[item.Attribute]) || "",
             Description: newDescription,
             List: listDisplay
           };
@@ -196,15 +223,12 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
       }
     });
 
-    // Save to MultiSchemaContext if editing a specific schema
+    // Save to MultiSchemaContext for the active schema only
     if (activeSchemaId) {
       updateSchemaState(activeSchemaId, {
         lanAttributeRowData: newLanAttributeRowData
       });
     }
-
-    // Also save to global context for compatibility
-    setLanAttributeRowData(newLanAttributeRowData);
   }, [
     languages,
     savedEntryCodes,
@@ -212,8 +236,7 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
     overlay,
     activeSchemaId,
     updateSchemaState,
-    setLanAttributeRowData,
-    attributesList,
+    effectiveAttributesList,
     lanAttributeRowData
   ]);
 
@@ -277,7 +300,7 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
           attributesWithLists.includes(params.data.Attribute) ? {} : greyCellStyle
       }
     ]);
-  }, [attributesList, t]);
+  }, [effectiveAttributesList, t]);
 
   const onCellKeyDown = (e) => {
     const keyPressed = e.event.code;
@@ -294,6 +317,31 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
     setLoading(false);
   }, [setLoading]);
 
+  const onCellValueChanged = useCallback((event) => {
+    const { colDef, data, newValue } = event;
+    const attributeName = data.Attribute;
+    const { field } = colDef;
+
+    // Update local lanAttributeRowData
+    const updatedLanAttributeRowData = { ...lanAttributeRowData };
+    if (!updatedLanAttributeRowData[currentLanguage]) {
+      updatedLanAttributeRowData[currentLanguage] = [];
+    }
+    
+    updatedLanAttributeRowData[currentLanguage] = updatedLanAttributeRowData[currentLanguage].map((row) => 
+      row.Attribute === attributeName 
+        ? { ...row, [field]: newValue }
+        : row
+    );
+
+    // Update MultiSchemaContext
+    if (schemaId) {
+      updateSchemaState(schemaId, {
+        lanAttributeRowData: updatedLanAttributeRowData
+      });
+    }
+  }, [lanAttributeRowData, currentLanguage, schemaId, updateSchemaState]);
+
   return (
     <div className="ag-theme-balham" style={{ width: 890 }}>
       <style>{gridStyles}</style>
@@ -302,6 +350,7 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
         rowData={lanAttributeRowData[currentLanguage]}
         columnDefs={columnDefs}
         onCellKeyDown={onCellKeyDown}
+        onCellValueChanged={onCellValueChanged}
         domLayout="autoHeight"
         onGridReady={onGridReady}
       />

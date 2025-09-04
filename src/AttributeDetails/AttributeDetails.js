@@ -11,7 +11,7 @@ import { Alert, Box, Typography } from "@mui/material";
 import Grid from "./Grid";
 import AddAttribute from "./AddAttribute";
 import { Context } from "../App";
-import { useMultiSchema } from "../context/MultiSchemaContext";
+import { useMultiSchema, useSchemaData } from "../context/MultiSchemaContext";
 import {
   removeSpacesFromString,
   removeSpacesFromArrayOfObjects
