@@ -199,42 +199,31 @@ export default function LanGrid({ gridRef, currentLanguage, setLoading }) {
       if (!newLanAttributeRowData[language]) {
         const newLanguageList = [];
         effectiveAttributesList.forEach((item) => {
-          // Prefer saved entry codes (user edits) for List display; fallback to overlays
+          // Use saved entry codes for List display (no fallback to avoid flickering)
           const overlayLangKey = languageNameToAlpha3Codes[`${language}`.toLowerCase()] || language;
-          let listDisplayArray = (currentSavedEntryCodes?.[item] || [])
-            .map((row) => row?.[overlayLangKey] || row?.[language])
-            .filter((txt) => txt && txt.trim() !== "");
+          const entryCodesForItem = currentSavedEntryCodes?.[item] || [];
           
-          if (item === 'q3' || item === 'q4') {
-            console.log(`LanGrid List Debug - ${item} DETAILED:`, {
+          // Debug what we're actually getting
+          if (item === "q3" && entryCodesForItem.length > 0) {
+            // eslint-disable-next-line no-console
+            console.log("Entry codes debug for q3:", {
               language,
-              savedEntryCodesForItem: currentSavedEntryCodes?.[item],
-              firstRow: currentSavedEntryCodes?.[item]?.[0],
-              listDisplayArray
+              overlayLangKey,
+              entryCodesForItem,
+              firstEntry: entryCodesForItem[0],
+              availableKeys: Object.keys(entryCodesForItem[0] || {})
             });
           }
           
-          if (listDisplayArray.length === 0) {
-            // Use same logic as ViewSchema - entryCodesMap contains arrays of objects
-            const codesForAttr = Array.isArray(entryCodesMap[item]) 
-              ? entryCodesMap[item] 
-              : [];
-            const overlayLangKey = languageNameToAlpha3Codes[`${language}`.toLowerCase()] || language;
-            const labelForLang = (row) =>
-              row[language] || row[overlayLangKey] || row.English || row.eng || row.Code;
-            listDisplayArray = codesForAttr
-              .map((row) => labelForLang(row))
-              .filter(Boolean);
-              
-            if (item === 'q3' || item === 'q4') {
-              console.log(`LanGrid List Debug - ${item} FALLBACK DETAILED:`, {
-                codesForAttr,
-                firstCodesRow: codesForAttr[0],
-                overlayLangKey,
-                listDisplayArray
-              });
-            }
-          }
+          const listDisplayArray = entryCodesForItem
+            .map((row) => {
+              const displayValue = row?.[overlayLangKey] || row?.[language];
+              // Never show raw codes - only human-readable text
+              return displayValue && displayValue !== row?.Code ? displayValue : null;
+            })
+            .filter((txt) => txt && txt.trim() !== "");
+          
+          // Only show list if we have actual entry codes (prevents flickering on initial load)
           const listDisplayString = listDisplayArray.join(" | ");
           let listDisplay = listDisplayString || "Not a List";
           if (listDisplayArray.length > 3) {
