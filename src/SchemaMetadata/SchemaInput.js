@@ -24,8 +24,7 @@ export default function SchemaInput({
     languages,
     setLanguages,
     customIsos,
-    OCAPackage,
-    editingSchemaId
+    OCAPackage
   } = useContext(Context);
   const [deleteHover, setDeleteHover] = useState(false);
   const nameFieldId = `schema-name${language}`;
@@ -41,24 +40,21 @@ export default function SchemaInput({
         : language?.toLowerCase();
 
   // Get the schema data for the currently editing schema
-  const currentSchemaData = editingSchemaId
-    ? getSchemaDataById(OCAPackage, editingSchemaId, langKey)
+  const currentSchemaData = activeSchemaId
+    ? getSchemaDataById(OCAPackage, activeSchemaId, langKey)
     : null;
 
   // If we're editing a specific schema, use the schema name and description from the data
-  const metaState =
-    activeSchemaId || editingSchemaId
-      ? getSchemaState(activeSchemaId || editingSchemaId)?.metadata
+  const metaState = activeSchemaId
+      ? getSchemaState(activeSchemaId)?.metadata
       : null;
   const metaLocalized = metaState?.localized || {};
 
   // Get the schema name and description for the current language
-  const schemaName =
-    activeSchemaId || editingSchemaId
-      ? metaLocalized?.[langKey]?.name || currentSchemaData?.schemaName || editingSchemaId
-      : currentSchemaData?.schemaName || currentSchemaData?.fieldName || editingSchemaId;
-  const currentSchemaDescription =
-    activeSchemaId || editingSchemaId
+  const schemaName = activeSchemaId
+      ? metaLocalized?.[langKey]?.name || currentSchemaData?.schemaName || activeSchemaId
+      : currentSchemaData?.schemaName || currentSchemaData?.fieldName || "";
+  const currentSchemaDescription = activeSchemaId
       ? metaLocalized?.[langKey]?.description ||
         currentSchemaData?.schemaDescription ||
         ""
@@ -72,7 +68,7 @@ export default function SchemaInput({
     const newText = e.target.value;
 
     // Only update global context if we're not editing a specific schema
-    if (!(activeSchemaId || editingSchemaId)) {
+    if (!activeSchemaId) {
       let newSchema = JSON.parse(JSON.stringify(schemaDescription));
       newSchema = {
         ...newSchema,
@@ -82,7 +78,7 @@ export default function SchemaInput({
     }
 
     // Always update multi-schema context if we have a target schema
-    const targetId = activeSchemaId || editingSchemaId;
+    const targetId = activeSchemaId;
     if (targetId) {
       const st = getSchemaState(targetId) || {};
       const prevMeta = st.metadata || {};
@@ -109,7 +105,7 @@ export default function SchemaInput({
     const newText = e.target.value;
 
     // Only update global context if we're not editing a specific schema
-    if (!(activeSchemaId || editingSchemaId)) {
+    if (!activeSchemaId) {
       let newSchema = JSON.parse(JSON.stringify(schemaDescription));
       newSchema = {
         ...newSchema,
@@ -119,7 +115,7 @@ export default function SchemaInput({
     }
 
     // Always update multi-schema context if we have a target schema
-    const targetId = activeSchemaId || editingSchemaId;
+    const targetId = activeSchemaId;
     if (targetId) {
       const st = getSchemaState(targetId) || {};
       const prevMeta = st.metadata || {};
@@ -283,7 +279,7 @@ export default function SchemaInput({
             }
           }}
           value={
-            activeSchemaId || editingSchemaId
+            activeSchemaId
               ? schemaName || ""
               : schemaDescription[language] && schemaDescription[language].name
           }
@@ -324,7 +320,7 @@ export default function SchemaInput({
           type="text"
           onChange={handleDescriptionField}
           value={
-            activeSchemaId || editingSchemaId
+            activeSchemaId
               ? currentSchemaDescription
               : schemaDescription[language] && schemaDescription[language].description
           }

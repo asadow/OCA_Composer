@@ -100,8 +100,8 @@ export default function ViewGrid({
   const { OCAPackage } = useContext(Context);
   
   // Get overlay data from MultiSchemaContext
-  const { activeSchemaId, editingSchemaId, getOverlaySelections, getSchemaState, updateSchemaState } = useMultiSchema();
-  const currentSchemaId = activeSchemaId || editingSchemaId;
+  const { activeSchemaId, getOverlaySelections, getSchemaState, updateSchemaState } = useMultiSchema();
+  const currentSchemaId = activeSchemaId;
   const overlay = getOverlaySelections(currentSchemaId);
   const schemaState = getSchemaState(currentSchemaId);
   

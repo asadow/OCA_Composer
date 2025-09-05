@@ -31,12 +31,11 @@ export default function SchemaMetadata({
   // Use MultiSchema context with standard pattern
   const { 
     activeSchemaId, 
-    editingSchemaId: multiSchemaEditingId, 
     getSchemaState, 
     updateSchemaState 
   } = useMultiSchema();
   
-  const currentSchemaId = activeSchemaId || multiSchemaEditingId;
+  const currentSchemaId = activeSchemaId;
   const schemaState = getSchemaState(currentSchemaId);
   
   const updateCurrentSchema = useCallback((updates) => {
@@ -55,12 +54,10 @@ export default function SchemaMetadata({
   // Global context for app-level state
   const {
     schemaDescription: globalSchemaDescription,
-    setSchemaDescription: setGlobalSchemaDescription,
     languages: globalLanguages,
     history,
     setHistory,
-    setCurrentPage,
-    editingSchemaId
+    setCurrentPage
   } = useContext(Context);
 
   // Use schema state directly - no fallback needed

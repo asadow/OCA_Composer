@@ -44,14 +44,12 @@ export default function ViewSchema({
     isZip,
     isZipEdited,
     setCurrentPage,
-    OCAPackage,
-    setEditingSchemaId
+    OCAPackage
   } = useContext(Context);
 
   // Multi-schema context
   const {
     activeSchemaId,
-    editingSchemaId,
     switchToSchema,
     exportSchemaChanges,
     getModifiedSchemas,
@@ -111,7 +109,6 @@ export default function ViewSchema({
       if (schemaId !== activeSchemaId) {
         switchToSchema(schemaId, OCAPackage);
       }
-      setEditingSchemaId(schemaId);
       setCurrentPage("Details");
       navigate("/start");
     },
@@ -119,7 +116,6 @@ export default function ViewSchema({
       activeSchemaId,
       switchToSchema,
       OCAPackage,
-      setEditingSchemaId,
       setCurrentPage,
       navigate
     ]
@@ -173,7 +169,7 @@ export default function ViewSchema({
         await originalExportData();
       }
     } catch (error) {
-      console.error("Export failed:", error);
+      // console.error("Export failed:", error);
     } finally {
       setLoading(false);
     }
@@ -186,14 +182,14 @@ export default function ViewSchema({
         setLoading(true);
 
         if (OCAPackage) {
-          // Use the same logic as other components: prioritize activeSchemaId, then editingSchemaId
-          let currentSchemaId = activeSchemaId || editingSchemaId;
+          // Use activeSchemaId for current schema
+          let currentSchemaId = activeSchemaId;
 
           // Validate that the selected schema actually exists in the package
           if (currentSchemaId) {
             const schemaExists = getSchemaState(currentSchemaId);
             if (!schemaExists || !schemaExists.initialized) {
-              console.warn("ViewSchema: Selected schema", currentSchemaId, "not found or not initialized, falling back to root schema");
+              // console.warn("ViewSchema: Selected schema", currentSchemaId, "not found or not initialized, falling back to root schema");
               currentSchemaId = null;
             }
           }
@@ -310,7 +306,8 @@ export default function ViewSchema({
             }
           } else {
             // Create display array from schema attributes if available
-            const fallbackDisplayArray = (schemaState.attributes || []).map((attr) => ({
+            const currentSchemaState = getSchemaState(currentSchemaId);
+            const fallbackDisplayArray = (currentSchemaState?.attributes || []).map((attr) => ({
               Attribute: attr.Attribute,
               Type: attr.Type || "",
               Description: { [currentLanguage]: attr.Description || "" },
@@ -343,7 +340,6 @@ export default function ViewSchema({
     return () => clearTimeout(timer);
   }, [
     activeSchemaId,
-    editingSchemaId,
     OCAPackage,
     currentLanguage,
     getSchemaState,
