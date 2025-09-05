@@ -147,27 +147,14 @@ const SchemaVisualizationEmbed = ({
   const generateLayout = useCallback(() => {
     const ocaPackage = getOCAPackage();
     if (!ocaPackage) {
-      // console.log("SchemaVisualizationEmbed: generateLayout - No OCA package available");
       return;
     }
-    // console.log("SchemaVisualizationEmbed: generateLayout - Processing package:", {
-    //   dependencies: ocaPackage.dependencies?.length || 0,
-    //   dependencyIds: ocaPackage.dependencies?.map((d) => d.d) || [],
-    //   rootAttributes: Object.keys(ocaPackage.bundle?.capture_base?.attributes || {})
-    // });
 
     const languageCode = toThreeLetterCode(i18n.language.split("-")[0]) || "eng";
     const processedSchemaData = extractSchemaDataFromPackage(ocaPackage, languageCode);
     if (!processedSchemaData) {
-      // console.log(
-      //   "SchemaVisualizationEmbed: generateLayout - Failed to extract schema data"
-      // );
       return;
     }
-    // console.log("SchemaVisualizationEmbed: generateLayout - Extracted data:", {
-    //   attributes: Object.keys(processedSchemaData.attributes || {}),
-    //   dependencies: processedSchemaData.dependencies?.length || 0
-    // });
     let result;
     try {
       // Get the schema name - prioritize the actual schema name over generic "Parent Schema"
@@ -189,6 +176,7 @@ const SchemaVisualizationEmbed = ({
           }
         }
       }
+      
       if (internalViewMode === "tree") {
         result = generateTreeLayout(
           processedSchemaData,
@@ -262,6 +250,7 @@ const SchemaVisualizationEmbed = ({
         }
       }
     } catch (error) {
+      console.error("SchemaVisualizationEmbed: Error in generateLayout:", error);
       setNodes([]);
       setEdges([]);
       setHasData(false);
@@ -271,14 +260,8 @@ const SchemaVisualizationEmbed = ({
   // Generate layout on component mount and when dependencies change
   useEffect(() => {
     const ocaPackage = getOCAPackage();
-    console.log("SchemaVisualizationEmbed: useEffect triggered, OCAPackage:", {
-      hasPackage: !!ocaPackage,
-      dependenciesCount: ocaPackage?.dependencies?.length || 0,
-      dependencyIds: ocaPackage?.dependencies?.map((d) => d.d) || [],
-      rootAttributes: Object.keys(ocaPackage?.bundle?.capture_base?.attributes || {})
-    });
 
-    if (ocaPackage && ocaPackage.dependencies && ocaPackage.dependencies.length > 0) {
+    if (ocaPackage && ocaPackage.bundle) {
       generateLayout();
 
       // Set initial currentSchemaId to the root schema if not already set

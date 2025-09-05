@@ -193,12 +193,15 @@ export const generateTreeLayout = (
         const refDep = dependencyMap[refId];
 
         if (refDep) {
-          const refLabelOverlay =
-            refDep.overlays?.label?.find((l) => l.language === language) ||
-            refDep.overlays?.label?.[0];
-          const refMetaOverlay =
-            refDep.overlays?.meta?.find((m) => m.language === language) ||
-            refDep.overlays?.meta?.[0];
+          const refLabelOverlays = refDep.overlays?.label;
+          const refLabelOverlay = Array.isArray(refLabelOverlays)
+            ? (refLabelOverlays.find((l) => l.language === language) || refLabelOverlays[0])
+            : null;
+          
+          const refMetaOverlays = refDep.overlays?.meta;
+          const refMetaOverlay = Array.isArray(refMetaOverlays)
+            ? (refMetaOverlays.find((m) => m.language === language) || refMetaOverlays[0])
+            : null;
 
           const childNode = buildHierarchy({
             nodeId: refId,
@@ -373,9 +376,10 @@ export const generateDetailedLayout = (
         // Look for the schema in dependencies to see if it has attributes
         if (dependencies) {
           const dependencyWithAttributes = dependencies.find((dep) => {
-            const metaOverlay =
-              dep.overlays?.meta?.find((m) => m.language === language) ||
-              dep.overlays?.meta?.[0];
+            const metaOverlays = dep.overlays?.meta;
+            const metaOverlay = Array.isArray(metaOverlays)
+              ? (metaOverlays.find((m) => m.language === language) || metaOverlays[0])
+              : null;
             return metaOverlay?.name === placeholderId;
           });
 
@@ -384,16 +388,20 @@ export const generateDetailedLayout = (
             dependencyWithAttributes.capture_base?.attributes
           ) {
             // This placeholder now has attributes, use them
+            const labelOverlays = dependencyWithAttributes.overlays?.label;
+            const labelAttributes = Array.isArray(labelOverlays) 
+              ? (labelOverlays.find((l) => l.language === language)?.attribute_labels || {})
+              : {};
+            
             placeholderFields = processAttributes(
               dependencyWithAttributes.capture_base.attributes,
-              dependencyWithAttributes.overlays?.label?.find(
-                (l) => l.language === language
-              )?.attribute_labels || {}
+              labelAttributes
             );
-            const metaOverlay =
-              dependencyWithAttributes.overlays?.meta?.find(
-                (m) => m.language === language
-              ) || dependencyWithAttributes.overlays?.meta?.[0];
+            
+            const metaOverlays = dependencyWithAttributes.overlays?.meta;
+            const metaOverlay = Array.isArray(metaOverlays)
+              ? (metaOverlays.find((m) => m.language === language) || metaOverlays[0])
+              : null;
             placeholderTitle = metaOverlay?.name || placeholderId;
           }
         }
