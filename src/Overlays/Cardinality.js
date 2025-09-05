@@ -88,14 +88,40 @@ const Cardinality = () => {
   }, [currentSchemaId, updateSchemaState]);
   
   // Always get data from schema state - no fallback needed
-  const cardinalityData = useMemo(() => 
-    schemaState?.cardinalityData || []
-  , [schemaState?.cardinalityData]);
+  const cardinalityData = useMemo(() => {
+    const rawData = schemaState?.cardinalityData || [];
+    console.log("Raw cardinality data from schema state:", rawData);
+    
+    // If we have data but it's in the old format (Cardinality field), convert it
+    if (rawData.length > 0 && schemaState?.attributes) {
+      const currentLanguage = i18next.language.startsWith("fr") ? "fra" : "eng";
+      const labelData = schemaState?.lanAttributeRowData?.[currentLanguage] || [];
+      
+      const normalizedData = rawData.map((item) => {
+        const attr = schemaState.attributes.find((a) => a.Attribute === item.Attribute);
+        const labelInfo = labelData.find((l) => l.Attribute === item.Attribute);
+        
+        return {
+          Attribute: item.Attribute,
+          Type: attr?.Type || item.Type || "Text",
+          EntryLimit: item.EntryLimit || item.Cardinality || "", // Convert Cardinality to EntryLimit
+          Label: item.Label || labelInfo?.Label || ""
+        };
+      });
+      
+      console.log("Normalized cardinality data:", normalizedData);
+      return normalizedData;
+    }
+    
+    return rawData;
+  }, [schemaState?.cardinalityData, schemaState?.attributes, schemaState?.lanAttributeRowData]);
     
   const setCardinalityData = useCallback((newData) => {
+    console.log("setCardinalityData called with:", newData);
     updateCurrentSchema({
       cardinalityData: newData
     });
+    console.log("Updated schema with cardinalityData");
   }, [updateCurrentSchema]);
   
   const cardinalityRef = useRef();
@@ -109,57 +135,36 @@ const Cardinality = () => {
 
   // Initialize cardinality data from schema attributes if not exists
   useEffect(() => {
-    if (!schemaState?.cardinalityData && schemaState?.attributes) {
+    // Only initialize if cardinalityData doesn't exist yet
+    if (schemaState?.attributes && typeof schemaState?.cardinalityData === 'undefined') {
       // Get current language for labels - use ISO codes that match the data structure
       const currentLanguage = i18next.language.startsWith("fr") ? "fra" : "eng";
       const labelData = schemaState?.lanAttributeRowData?.[currentLanguage] || [];
       
       const newCardinalityData = schemaState.attributes.map((attr) => {
-        const labelInfo = labelData.find(l => l.Attribute === attr.Attribute);
-        return {
+        const labelInfo = labelData.find((l) => l.Attribute === attr.Attribute);
+        const cardinalityItem = {
           Attribute: attr.Attribute,
           Type: attr.Type || "Text",
           EntryLimit: "",
           Label: labelInfo?.Label || ""
         };
+        console.log("Creating cardinality item:", cardinalityItem);
+        console.log("Label data for", attr.Attribute, ":", labelInfo);
+        return cardinalityItem;
       });
+      console.log("Full labelData:", labelData);
+      console.log("Full newCardinalityData:", newCardinalityData);
       updateCurrentSchema({ cardinalityData: newCardinalityData });
-    } else if (schemaState?.cardinalityData && schemaState?.attributes) {
-      // Check if we need to update labels or convert format
-      const currentLanguage = i18next.language.startsWith("fr") ? "fra" : "eng";
-      const labelData = schemaState?.lanAttributeRowData?.[currentLanguage] || [];
-      
-      // Only update if there are missing labels or format conversion needed
-      const needsUpdate = schemaState.cardinalityData.some((card) => {
-        const attr = schemaState.attributes.find(a => a.Attribute === card.Attribute);
-        const labelInfo = labelData.find(l => l.Attribute === card.Attribute);
-        const hasLabelUpdate = labelInfo?.Label && !card.Label;
-        const hasFormatConversion = card.Cardinality && !card.EntryLimit;
-        const hasTypeUpdate = attr?.Type && attr.Type !== card.Type;
-        return hasLabelUpdate || hasFormatConversion || hasTypeUpdate;
-      });
-      
-      if (needsUpdate) {
-        const convertedData = schemaState.attributes.map((attr) => {
-          const existingCardinality = schemaState.cardinalityData.find((card) => card.Attribute === attr.Attribute);
-          const labelInfo = labelData.find(l => l.Attribute === attr.Attribute);
-          const entryLimit = existingCardinality?.EntryLimit || existingCardinality?.Cardinality || "";
-          return {
-            Attribute: attr.Attribute,
-            Type: attr.Type || "Text", // Always use current Type from attributes
-            // Handle both EntryLimit (component format) and Cardinality (OCA format)
-            EntryLimit: entryLimit,
-            Label: labelInfo?.Label || existingCardinality?.Label || ""
-          };
-        });
-        updateCurrentSchema({ cardinalityData: convertedData });
-      }
     }
-    // Set loading to false once data is ready
+  }, [schemaState?.attributes, schemaState?.lanAttributeRowData, schemaState?.cardinalityData, updateCurrentSchema]);
+
+  // Set loading state
+  useEffect(() => {
     if (schemaState?.cardinalityData || schemaState?.attributes) {
       setLoading(false);
     }
-  }, [schemaState?.attributes, schemaState?.cardinalityData, schemaState?.lanAttributeRowData, updateCurrentSchema]);
+  }, [schemaState?.cardinalityData, schemaState?.attributes]);
   const [dialogMessage, setDialogMessage] = useState("");
 
   const handleSave = useCallback(() => {
@@ -294,6 +299,19 @@ const Cardinality = () => {
         ...selectedCellData,
         EntryLimit: exactValue || `${minValue}-${maxValue}`
       });
+      
+      // Save the updated data to schema state
+      if (cardinalityRef.current) {
+        const newData = [];
+        cardinalityRef.current.api.forEachNode((node) => {
+          if (node.data) {
+            newData.push(node.data);
+          }
+        });
+        console.log("Cardinality handleApplyValues - saving data:", newData);
+        setCardinalityData(newData);
+      }
+      
       if (minValue !== "" && maxValue !== "") {
         setExactValue("");
       } else if (minValue === "" && maxValue === "" && exactValue === "") {
@@ -303,7 +321,7 @@ const Cardinality = () => {
         setMaxValue("");
       }
     }
-  }, [exactValue, isNotInteger, maxValue, minValue, selectedCellData, t]);
+  }, [exactValue, isNotInteger, maxValue, minValue, selectedCellData, t, setCardinalityData]);
 
   const onGridReady = useCallback(() => {
     setLoading(false);
@@ -351,7 +369,7 @@ const Cardinality = () => {
         field: "Delete",
         cellRenderer: TrashCanButton,
         cellRendererParams: {
-          handleDeleteRow: handleDeleteRow
+          handleDeleteRow
         },
         width: 100,
         headerComponent: CellHeader,
