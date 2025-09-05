@@ -91,6 +91,10 @@ export default function SchemaInput({
         ...prevLoc,
         [langKey]: { ...(prevLoc[langKey] || {}), name: newText }
       };
+      // Ensure we always have localized structure, initialize English if missing
+      if (!nextLocalized.eng) {
+        nextLocalized.eng = { name: prevMeta.name || newText, description: prevMeta.description || "" };
+      }
       // Only update the global name field if editing English (primary language)
       const nextMeta = langKey === "eng" 
         ? { ...prevMeta, name: newText, localized: nextLocalized }
@@ -124,7 +128,14 @@ export default function SchemaInput({
         ...prevLoc,
         [langKey]: { ...(prevLoc[langKey] || {}), description: newText }
       };
-      const nextMeta = { ...prevMeta, description: newText, localized: nextLocalized };
+      // Ensure we always have localized structure, initialize English if missing
+      if (!nextLocalized.eng) {
+        nextLocalized.eng = { name: prevMeta.name || "", description: prevMeta.description || newText };
+      }
+      // Only update the global description field if editing English (primary language)
+      const nextMeta = langKey === "eng" 
+        ? { ...prevMeta, description: newText, localized: nextLocalized }
+        : { ...prevMeta, localized: nextLocalized };
       updateSchemaState(targetId, { metadata: nextMeta });
     }
   };

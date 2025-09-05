@@ -731,8 +731,8 @@ export const MultiSchemaProvider = ({ children }) => {
               const childSchemaName = attr.Attribute;
               
               // Check if there's a schema state for this child schema
-              const childSchemaState = getSchemaState(childSchemaName);
-              if (childSchemaState && childSchemaState.initialized) {
+              const childSchemaState = getSchemaState(childSchemaName);              
+              if (childSchemaState && (childSchemaState.initialized || childSchemaState.attributes?.length > 0)) {
                 // Check if this child schema is already in the package
                 const existsInPackage = modifiedPackage.dependencies?.some(dep => dep.d === childSchemaName) ||
                                       modifiedPackage.bundle?.d === childSchemaName;

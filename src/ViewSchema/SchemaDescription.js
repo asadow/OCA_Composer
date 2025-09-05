@@ -6,7 +6,7 @@ import { useMultiSchema } from "../context/MultiSchemaContext";
 
 export default function SchemaDescription({ currentLanguage }) {
   const { t, i18n } = useTranslation();
-  const { schemaDescription, divisionGroup } = useContext(Context);
+  const { divisionGroup } = useContext(Context);
   // Use MultiSchema context with standard pattern
   const { activeSchemaId, editingSchemaId, getSchemaState } = useMultiSchema();
   
@@ -33,12 +33,10 @@ export default function SchemaDescription({ currentLanguage }) {
   const schemaName =
     localizedMeta?.name || 
     (uiLanguage === "en" ? currentMeta?.name : null) || 
-    schemaDescription?.[currentLanguage]?.name || 
     t("Unknown");
   const schemaDescriptionText =
     localizedMeta?.description ||
     (uiLanguage === "en" ? currentMeta?.description : null) ||
-    schemaDescription?.[currentLanguage]?.description ||
     t("No description available");
   const classification =
     divisionGroup?.group || divisionGroup?.division || t("Not classified");
