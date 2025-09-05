@@ -30,6 +30,7 @@ const Overlays = ({ pageBack, pageForward }) => {
     editingSchemaId,
     getOverlaySelections,
     updateOverlaySelection,
+    updateSchemaState,
     setSelectedOverlay,
     getSelectedOverlay
   } = useMultiSchema();
@@ -49,8 +50,21 @@ const Overlays = ({ pageBack, pageForward }) => {
     if (shouldDisableRangeOverlay(item, selectedFeatures, attributeRowData, rangeRowData))
       return;
 
-    updateOverlaySelection(currentSchemaId, item, { selected: true });
-    setSelectedOverlay(currentSchemaId, item);
+    // Get current overlay selections
+    const currentSelections = getOverlaySelections(currentSchemaId);
+    const updatedSelections = {
+      ...currentSelections,
+      [item]: {
+        ...currentSelections[item],
+        selected: true
+      }
+    };
+    
+    // Combine both updates into a single updateSchemaState call to avoid race condition
+    updateSchemaState(currentSchemaId, {
+      overlaySelections: updatedSelections,
+      selectedOverlay: item
+    });
     
     if (item === "Character Encoding") {
       setCurrentPage("CharacterEncoding");
@@ -72,12 +86,28 @@ const Overlays = ({ pageBack, pageForward }) => {
   };
 
   const removeFromSelected = () => {
-    updateOverlaySelection(currentSchemaId, selectedItemToDelete, { selected: false });
-    
+    // Get current overlay selections
+    const currentSelections = getOverlaySelections(currentSchemaId);
+    const updatedSelections = {
+      ...currentSelections,
+      [selectedItemToDelete]: {
+        ...currentSelections[selectedItemToDelete],
+        selected: false
+      }
+    };
+
     // Also remove range overlay if format overlay is being removed
     if (selectedItemToDelete === FIELD_FORMAT_OVERLAY) {
-      updateOverlaySelection(currentSchemaId, FIELD_RANGE_OVERLAY, { selected: false });
+      updatedSelections[FIELD_RANGE_OVERLAY] = {
+        ...currentSelections[FIELD_RANGE_OVERLAY],
+        selected: false
+      };
     }
+
+    // Update overlay selections in a single call to avoid race condition
+    updateSchemaState(currentSchemaId, {
+      overlaySelections: updatedSelections
+    });
 
     // Delete attribute from characterEncodingRowData
     const newCharacterEncodingRowData = characterEncodingRowData.map((row) => {

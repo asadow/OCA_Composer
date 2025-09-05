@@ -90,7 +90,7 @@ const Cardinality = () => {
   // Always get data from schema state - no fallback needed
   const cardinalityData = useMemo(() => {
     const rawData = schemaState?.cardinalityData || [];
-    console.log("Raw cardinality data from schema state:", rawData);
+    // console.log("Raw cardinality data from schema state:", rawData);
     
     // If we have data but it's in the old format (Cardinality field), convert it
     if (rawData.length > 0 && schemaState?.attributes) {
@@ -109,7 +109,7 @@ const Cardinality = () => {
         };
       });
       
-      console.log("Normalized cardinality data:", normalizedData);
+      // console.log("Normalized cardinality data:", normalizedData);
       return normalizedData;
     }
     
@@ -383,9 +383,12 @@ const Cardinality = () => {
   );
 
   const handleDeleteCurrentOverlay = useCallback(() => {
+    // Remove the overlay selection
     updateOverlaySelection(currentSchemaId, "Cardinality", { selected: false });
+    // Clear the cardinality data from schema state
+    updateCurrentSchema({ cardinalityData: undefined });
     setCurrentPage("Overlays");
-  }, [updateOverlaySelection, currentSchemaId, setCurrentPage]);
+  }, [updateOverlaySelection, currentSchemaId, setCurrentPage, updateCurrentSchema]);
 
   const rowClassRules = useMemo(
     () => ({
