@@ -97,13 +97,16 @@ export default function ViewGrid({
   setLoading = () => {}
 }) {
   const { t } = useTranslation();
-  const { cardinalityData, OCAPackage } = useContext(Context);
+  const { OCAPackage } = useContext(Context);
   
   // Get overlay data from MultiSchemaContext
   const { activeSchemaId, editingSchemaId, getOverlaySelections, getSchemaState, updateSchemaState } = useMultiSchema();
   const currentSchemaId = activeSchemaId || editingSchemaId;
   const overlay = getOverlaySelections(currentSchemaId);
   const schemaState = getSchemaState(currentSchemaId);
+  
+  // Get cardinality data from MultiSchema context instead of legacy context
+  const cardinalityData = schemaState?.cardinalityData || [];
   
   const [columnDefs, setColumnDefs] = useState([]);
   const [rowData, setRowData] = useState([]);
@@ -124,6 +127,11 @@ export default function ViewGrid({
       console.log("ViewGrid Debug - overlay:", overlay);
       // eslint-disable-next-line no-console  
       console.log("ViewGrid Debug - displayArray:", displayArray);
+      // eslint-disable-next-line no-console
+      console.log("ViewGrid Debug - Format Rules:", displayArray.map(item => ({ 
+        Attribute: item.Attribute, 
+        FormatRule: item["Format Rule"] 
+      })));
       
       const predefinedColumns = [
         {
@@ -413,7 +421,8 @@ export default function ViewGrid({
           const formatRuleData = schemaState?.formatRuleData;
           if (formatRuleData) {
             const formatRuleItem = formatRuleData.find((rule) => rule.Attribute === item.Attribute);
-            item["Format Rule"] = formatRuleItem ? formatRuleItem["Format Rule"] : "";
+            // Handle both legacy FormatText field and new "Format Rule" field
+            item["Format Rule"] = formatRuleItem ? (formatRuleItem["Format Rule"] || formatRuleItem.FormatText || "") : "";
           } else {
             item["Format Rule"] = item["Format Rule"] || ""; // Default to empty if not set
           }

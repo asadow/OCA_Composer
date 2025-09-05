@@ -50,56 +50,31 @@ const FormatRulesV2 = () => {
   const [loading, setLoading] = useState(true);
   const gridRef = useRef();
   
-  // Initialize format rule data from schema attributes if not exists
-  useEffect(() => {
-    if (schemaState?.attributes && !schemaState?.formatRuleData) {
-      // Only create if formatRuleData doesn't exist at all
-      const newFormatRuleData = schemaState.attributes.map((attr) => ({
+  // Get format rule data directly from schema state - no complex initialization
+  const formatRuleRowData = useMemo(() => {
+    if (!schemaState?.attributes) return [];
+    
+    // Always ensure we have format rule data for all attributes
+    const existingFormatRules = schemaState?.formatRuleData || [];
+    const existingRulesMap = new Map(existingFormatRules.map(rule => [rule.Attribute, rule]));
+    
+    return schemaState.attributes.map(attr => {
+      const existingRule = existingRulesMap.get(attr.Attribute);
+      // Always merge with current attribute data to ensure Type is present
+      return {
         Attribute: attr.Attribute,
         Type: attr.Type || "Text",
-        "Format Rule": "",
-        [CUSTOM_FORMAT_RULE]: ""
-      }));
-      updateCurrentSchema({ formatRuleData: newFormatRuleData });
-    } else if (schemaState?.attributes && schemaState?.formatRuleData) {
-      // Ensure all attributes are represented in formatRuleData, but preserve existing values
-      const existingRules = new Map(schemaState.formatRuleData.map((rule) => [rule.Attribute, rule]));
-      const completeFormatRuleData = schemaState.attributes.map((attr) => {
-        const existingRule = existingRules.get(attr.Attribute);
-        return existingRule ? {
-          ...existingRule,
-          Type: attr.Type || "Text" // Update type in case it changed
-        } : {
-          Attribute: attr.Attribute,
-          Type: attr.Type || "Text",
-          "Format Rule": "",
-          [CUSTOM_FORMAT_RULE]: ""
-        };
-      });
-      
-      // Only update if we're adding new attributes (length difference) or if any attribute is missing
-      const needsUpdate = completeFormatRuleData.length !== schemaState.formatRuleData.length ||
-        schemaState.attributes.some((attr) => !existingRules.has(attr.Attribute));
-      
-      if (needsUpdate) {
-        updateCurrentSchema({ formatRuleData: completeFormatRuleData });
-      }
-    }
-    // Set loading to false once data is ready or if we already have data
-    if (schemaState?.formatRuleData || schemaState?.attributes) {
-      setLoading(false);
-    }
-  }, [schemaState?.attributes, schemaState?.formatRuleData, updateCurrentSchema]);
-  
-  // Always get data from schema state - no fallback needed
-  const formatRuleRowData = useMemo(() => 
-    schemaState?.formatRuleData || []
-  , [schemaState?.formatRuleData]);
+        "Format Rule": existingRule?.["Format Rule"] || "",
+        [CUSTOM_FORMAT_RULE]: existingRule?.[CUSTOM_FORMAT_RULE] || ""
+      };
+    });
+  }, [schemaState?.attributes, schemaState?.formatRuleData]);
   
   const rangeRowData = useMemo(() => 
     schemaState?.rangeData || []
   , [schemaState?.rangeData]);
   
+  // Simple setter that only updates MultiSchema context
   const setFormatRuleRowData = useCallback((newData) => {
     updateCurrentSchema({ formatRuleData: newData });
   }, [updateCurrentSchema]);
@@ -108,12 +83,25 @@ const FormatRulesV2 = () => {
     updateCurrentSchema({ rangeData: newData });
   }, [updateCurrentSchema]);
 
+  // Set loading false when we have schema state
+  useEffect(() => {
+    if (schemaState && schemaState.initialized) {
+      setLoading(false);
+    }
+  }, [schemaState]);
+
   const handleSave = useCallback(() => {
+    if (!gridRef.current) return;
+    
     gridRef.current.api.stopEditing();
     const newFormatRuleRowData = gridRef.current.api
       .getRenderedNodes()
-      ?.map((node) => node?.data);
-    setFormatRuleRowData(newFormatRuleRowData);
+      ?.map((node) => node?.data) || [];
+    
+    // Only update if we have data to prevent clearing existing format rules
+    if (newFormatRuleRowData.length > 0) {
+      setFormatRuleRowData(newFormatRuleRowData);
+    }
 
     const newRangeRowData = [];
 
@@ -172,12 +160,14 @@ const FormatRulesV2 = () => {
   useEffect(() => {
     const currentGridRef = gridRef.current;
     return () => {
-      // Save on unmount
+      // Only save on unmount if we have valid data to prevent clearing existing format rules
       if (currentGridRef?.api) {
         const newFormatRuleRowData = currentGridRef.api
           .getRenderedNodes()
           ?.map((node) => node?.data);
-        if (newFormatRuleRowData) {
+        // Only update if we actually have data and it's not empty
+        // This prevents clearing format rules when grid is being destroyed
+        if (newFormatRuleRowData && newFormatRuleRowData.length > 0) {
           setFormatRuleRowData(newFormatRuleRowData);
         }
       }
@@ -237,7 +227,7 @@ const FormatRulesV2 = () => {
         field: CUSTOM_FORMAT_RULE,
         headerComponent: CellHeader,
         headerComponentParams: {
-          headerText: t("Custom Format Rule"),
+          headerText: t("Custom Format Rule", { defaultValue: "Custom Format Rule" }),
           helpText: t("Enter a custom regular expression for the attribute's data")
         },
         // A custom format rule can be provided only if no built-in format rule is selected

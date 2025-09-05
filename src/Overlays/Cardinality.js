@@ -64,9 +64,7 @@ const TrashCanButton = memo(
 const Cardinality = () => {
   const { t } = useTranslation();
   const {
-    setCurrentPage,
-    lanAttributeRowData,
-    attributeRowData
+    setCurrentPage
   } = useContext(Context);
   
   // Use MultiSchema context with standard pattern
@@ -111,20 +109,44 @@ const Cardinality = () => {
   // Initialize cardinality data from schema attributes if not exists
   useEffect(() => {
     if (!schemaState?.cardinalityData && schemaState?.attributes) {
-      const newCardinalityData = schemaState.attributes.map((attr) => ({
-        Attribute: attr.Attribute,
-        Type: attr.Type || "Text",
-        EntryLimit: ""
-      }));
-      updateCurrentSchema({ cardinalityData: newCardinalityData });
-    } else if (schemaState?.cardinalityData && schemaState?.attributes) {
-      // Convert existing cardinalityData to component format if needed
-      const convertedData = schemaState.attributes.map((attr) => {
-        const existingCardinality = schemaState.cardinalityData.find((card) => card.Attribute === attr.Attribute);
+      // Get current language for labels - try multiple methods
+      const currentLanguage = i18next.language === "fr" ? "French" : "English";
+      const labelData = schemaState?.lanAttributeRowData?.[currentLanguage] || [];
+      console.log('Cardinality: Initial setup - language:', currentLanguage, 'i18next.language:', i18next.language);
+      console.log('Cardinality: Available languages in lanAttributeRowData:', Object.keys(schemaState?.lanAttributeRowData || {}));
+      console.log('Cardinality: labelData:', labelData);
+      
+      const newCardinalityData = schemaState.attributes.map((attr) => {
+        const labelInfo = labelData.find(l => l.Attribute === attr.Attribute);
+        console.log(`Cardinality: ${attr.Attribute} - found label:`, labelInfo?.Label);
         return {
           Attribute: attr.Attribute,
           Type: attr.Type || "Text",
-          EntryLimit: existingCardinality?.Cardinality || ""
+          EntryLimit: "",
+          Label: labelInfo?.Label || ""
+        };
+      });
+      updateCurrentSchema({ cardinalityData: newCardinalityData });
+    } else if (schemaState?.cardinalityData && schemaState?.attributes) {
+      // Convert existing cardinalityData to component format if needed
+      // Get current language for labels - try multiple methods
+      const currentLanguage = i18next.language === "fr" ? "French" : "English";
+      const labelData = schemaState?.lanAttributeRowData?.[currentLanguage] || [];
+      console.log('Cardinality: Update setup - language:', currentLanguage, 'i18next.language:', i18next.language);
+      console.log('Cardinality: Available languages in lanAttributeRowData:', Object.keys(schemaState?.lanAttributeRowData || {}));
+      console.log('Cardinality: labelData:', labelData);
+      
+      const convertedData = schemaState.attributes.map((attr) => {
+        const existingCardinality = schemaState.cardinalityData.find((card) => card.Attribute === attr.Attribute);
+        const labelInfo = labelData.find(l => l.Attribute === attr.Attribute);
+        const entryLimit = existingCardinality?.EntryLimit || existingCardinality?.Cardinality || "";
+        console.log(`Cardinality: ${attr.Attribute} - found label:`, labelInfo?.Label, 'entryLimit:', entryLimit);
+        return {
+          Attribute: attr.Attribute,
+          Type: attr.Type || "Text", // Always use current Type from attributes
+          // Handle both EntryLimit (component format) and Cardinality (OCA format)
+          EntryLimit: entryLimit,
+          Label: labelInfo?.Label || existingCardinality?.Label || ""
         };
       });
       updateCurrentSchema({ cardinalityData: convertedData });
@@ -133,7 +155,7 @@ const Cardinality = () => {
     if (schemaState?.cardinalityData || schemaState?.attributes) {
       setLoading(false);
     }
-  }, [schemaState?.attributes, schemaState?.cardinalityData, updateCurrentSchema]);
+  }, [schemaState?.attributes, schemaState?.cardinalityData, schemaState?.lanAttributeRowData, updateCurrentSchema]);
   const [dialogMessage, setDialogMessage] = useState("");
 
   const handleSave = useCallback(() => {
@@ -332,32 +354,6 @@ const Cardinality = () => {
     updateOverlaySelection(currentSchemaId, "Cardinality", { selected: false });
     setCurrentPage("Overlays");
   }, [updateOverlaySelection, currentSchemaId, setCurrentPage]);
-
-  useEffect(() => {
-    // Use current UI language instead of first language
-    const currentLanguage = t("lng") === "fr" ? "French" : "English";
-    const cardinalityDataCopy = [];
-
-    for (const item of lanAttributeRowData?.[currentLanguage] || []) {
-      const entity = cardinalityData?.find((row) => row.Attribute === item.Attribute);
-      const typeAttribute = attributeRowData?.find(
-        (row) => row.Attribute === item.Attribute
-      );
-      cardinalityDataCopy.push({
-        Attribute: item?.Attribute,
-        Label: item?.Label,
-        EntryLimit:
-          entity &&
-          entity?.Type === typeAttribute?.Type &&
-          entity?.Attribute === typeAttribute?.Attribute
-            ? entity.EntryLimit
-            : "",
-        Type: typeAttribute?.Type
-      });
-    }
-
-    setCardinalityData(cardinalityDataCopy);
-  }, [lanAttributeRowData, attributeRowData, cardinalityData, setCardinalityData, t]);
 
   const rowClassRules = useMemo(
     () => ({

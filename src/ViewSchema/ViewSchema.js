@@ -40,7 +40,6 @@ export default function ViewSchema({
 
   const {
     languages,
-    attributeRowData,
     schemaDescription,
     isZip,
     isZipEdited,
@@ -52,6 +51,7 @@ export default function ViewSchema({
   // Multi-schema context
   const {
     activeSchemaId,
+    editingSchemaId,
     switchToSchema,
     exportSchemaChanges,
     getModifiedSchemas,
@@ -134,8 +134,6 @@ export default function ViewSchema({
     if (!OCAPackage) return;
     // Always regenerate a derived package from current multi-schema state
     const modifiedPackage = exportSchemaChanges(OCAPackage);
-    console.log("ViewSchema: Updating package, vizVersion:", vizVersion + 1);
-    console.log("ViewSchema: Modified schemas:", getModifiedSchemas());
     setUpdatedOCAPackage(modifiedPackage);
     setVizVersion((v) => v + 1);
   }, [OCAPackage, schemaStates, exportSchemaChanges]);
@@ -188,23 +186,36 @@ export default function ViewSchema({
         setLoading(true);
 
         if (OCAPackage) {
-          // Always try to load data for the current schema
-          let currentSchemaId = activeSchemaId;
+          // Use the same logic as other components: prioritize activeSchemaId, then editingSchemaId
+          let currentSchemaId = activeSchemaId || editingSchemaId;
 
-          // If no active schema is set, use the root schema
+          // Validate that the selected schema actually exists in the package
+          if (currentSchemaId) {
+            const schemaExists = getSchemaState(currentSchemaId);
+            if (!schemaExists || !schemaExists.initialized) {
+              console.warn("ViewSchema: Selected schema", currentSchemaId, "not found or not initialized, falling back to root schema");
+              currentSchemaId = null;
+            }
+          }
+
+          // If no schema is set or it doesn't exist, use the root schema
           if (!currentSchemaId) {
             currentSchemaId = OCAPackage.bundle?.d || OCAPackage.bundle?.capture_base?.d;
           }
 
           if (currentSchemaId) {
             const schemaState = getSchemaState(currentSchemaId);
+            
             if (schemaState && schemaState.initialized) {
               // Convert schema state back to the format expected by ViewGrid
               const schemaAttributes = schemaState.attributes || [];
+              const formatRuleData = schemaState.formatRuleData || [];
+              
               const formatRuleIndex = new Map(
-                (schemaState.formatRuleData || []).map((r) => [
+                formatRuleData.map((r) => [
                   r.Attribute,
-                  r["Format Rule"] || ""
+                  // Handle both legacy FormatText field and new "Format Rule" field
+                  r["Format Rule"] || r.FormatText || ""
                 ])
               );
 
@@ -282,16 +293,40 @@ export default function ViewSchema({
 
               setDisplayArray(newDisplayArray);
             } else {
-              // Fallback to original attribute row data
-              setDisplayArray(attributeRowData);
+              // Fallback: create basic display array from schema attributes
+              const fallbackDisplayArray = (schemaState.attributes || []).map((attr) => ({
+                Attribute: attr.Attribute,
+                Type: attr.Type || "",
+                Description: { [currentLanguage]: attr.Description || "" },
+                Label: { [currentLanguage]: attr.Label || "" },
+                Required: !!attr.Required,
+                "Format Rule": "",
+                "Character Encoding": "",
+                List: { [currentLanguage]: "Not a List" },
+                Unit: attr.Unit || "",
+                Flagged: attr.Flagged || false
+              }));
+              setDisplayArray(fallbackDisplayArray);
             }
           } else {
-            // Use the original attribute row data
-            setDisplayArray(attributeRowData);
+            // Create display array from schema attributes if available
+            const fallbackDisplayArray = (schemaState.attributes || []).map((attr) => ({
+              Attribute: attr.Attribute,
+              Type: attr.Type || "",
+              Description: { [currentLanguage]: attr.Description || "" },
+              Label: { [currentLanguage]: attr.Label || "" },
+              Required: !!attr.Required,
+              "Format Rule": "",
+              "Character Encoding": "",
+              List: { [currentLanguage]: "Not a List" },
+              Unit: attr.Unit || "",
+              Flagged: attr.Flagged || false
+            }));
+            setDisplayArray(fallbackDisplayArray);
           }
         } else {
-          // Use the original attribute row data
-          setDisplayArray(attributeRowData);
+          // No valid schema - show empty array
+          setDisplayArray([]);
         }
 
         setLoading(false);
@@ -308,11 +343,12 @@ export default function ViewSchema({
     return () => clearTimeout(timer);
   }, [
     activeSchemaId,
+    editingSchemaId,
     OCAPackage,
     currentLanguage,
-    attributeRowData,
     getSchemaState,
-    filteredLanguages
+    filteredLanguages,
+    schemaStates // Add this to ensure updates when schema state changes
   ]);
 
   if (loading) {
@@ -444,7 +480,12 @@ export default function ViewSchema({
           <Box sx={{ mb: 4, width: "100%" }}>
             <SchemaVisualizationEmbed
               key={`viz-${vizVersion}-${updatedOCAPackage?.bundle?.d}-${getModifiedSchemas().length}`}
-              attributeRowData={attributeRowData}
+              attributeRowData={(() => {
+                // Get attribute data from MultiSchema context for visualization
+                const currentSchemaId = activeSchemaId || (OCAPackage?.bundle?.d || OCAPackage?.bundle?.capture_base?.d);
+                const schemaState = getSchemaState(currentSchemaId);
+                return schemaState?.attributes || [];
+              })()}
               schemaDescription={schemaDescription}
               languages={filteredLanguages}
               OCAPackage={updatedOCAPackage}
