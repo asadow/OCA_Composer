@@ -719,6 +719,105 @@ export const MultiSchemaProvider = ({ children }) => {
         }
       });
 
+      // After processing all modified schemas, check for child schemas that need to be added as dependencies
+      Array.from(modifiedSchemas).forEach((schemaId) => {
+        const schemaState = getSchemaState(schemaId);
+        if (!schemaState.initialized) return;
+
+        // Look for "Child Schema" type attributes in this schema
+        if (schemaState.attributes) {
+          schemaState.attributes.forEach((attr) => {
+            if (attr.Type === "Child Schema" || attr.Type === "Array[Child Schema]") {
+              const childSchemaName = attr.Attribute;
+              
+              // Check if there's a schema state for this child schema
+              const childSchemaState = getSchemaState(childSchemaName);
+              if (childSchemaState && childSchemaState.initialized) {
+                // Check if this child schema is already in the package
+                const existsInPackage = modifiedPackage.dependencies?.some(dep => dep.d === childSchemaName) ||
+                                      modifiedPackage.bundle?.d === childSchemaName;
+                
+                if (!existsInPackage) {
+                  // Create a new dependency for this child schema
+                  const childAttributes = {};
+                  childSchemaState.attributes?.forEach((childAttr) => {
+                    if (childAttr.Attribute) {
+                      if (childAttr.Type === "Child Schema") {
+                        childAttributes[childAttr.Attribute] = `refn:placeholder_${childAttr.Attribute}`;
+                      } else {
+                        childAttributes[childAttr.Attribute] = childAttr.Type || "Text";
+                      }
+                    }
+                  });
+
+                  const newDependency = {
+                    d: childSchemaName,
+                    capture_base: {
+                      d: `schema_${childSchemaName}_${Date.now()}`,
+                      type: "spec/capture_base/1.1",
+                      attributes: childAttributes,
+                      classification: "RDF508",
+                      flagged_attributes: []
+                    },
+                    overlays: {
+                      meta: [
+                        {
+                          d: `meta_${childSchemaName}_${Date.now()}`,
+                          capture_base: `schema_${childSchemaName}_${Date.now()}`,
+                          type: "spec/overlays/meta/1.1",
+                          language: "eng",
+                          name: childSchemaState.metadata?.name || childSchemaName,
+                          description: childSchemaState.metadata?.description || ""
+                        }
+                      ]
+                    }
+                  };
+
+                  // Add overlays from child schema state
+                  if (childSchemaState.overlays) {
+                    Object.entries(childSchemaState.overlays).forEach(([overlayType, overlayData]) => {
+                      if (overlayData) newDependency.overlays[overlayType] = overlayData;
+                    });
+                  }
+
+                  // Add entry codes if present
+                  if (childSchemaState.entryCodes && Object.keys(childSchemaState.entryCodes).length > 0) {
+                    const entryOverlay = {
+                      d: `entry_${childSchemaName}_${Date.now()}`,
+                      capture_base: newDependency.capture_base.d,
+                      type: "spec/overlays/entry/1.1",
+                      language: "eng",
+                      attribute_entries: {}
+                    };
+
+                    Object.entries(childSchemaState.entryCodes).forEach(([attrName, codes]) => {
+                      if (Array.isArray(codes)) {
+                        entryOverlay.attribute_entries[attrName] = {};
+                        codes.forEach((code) => {
+                          if (code.Code) {
+                            entryOverlay.attribute_entries[attrName][code.Code] =
+                              code.eng || code.English || "";
+                          }
+                        });
+                      }
+                    });
+
+                    if (!newDependency.overlays) newDependency.overlays = {};
+                    newDependency.overlays.entry = [entryOverlay];
+                  }
+
+                  // Add the new dependency to the package
+                  if (!modifiedPackage.dependencies) {
+                    modifiedPackage.dependencies = [];
+                  }
+                  modifiedPackage.dependencies.push(newDependency);
+                }
+              }
+            }
+          });
+        }
+      });
+
       return modifiedPackage;
     },
     [getSchemaState, modifiedSchemas]

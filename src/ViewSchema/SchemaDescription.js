@@ -5,7 +5,7 @@ import { Context } from "../App";
 import { useMultiSchema } from "../context/MultiSchemaContext";
 
 export default function SchemaDescription({ currentLanguage }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { schemaDescription, divisionGroup } = useContext(Context);
   // Use MultiSchema context with standard pattern
   const { activeSchemaId, editingSchemaId, getSchemaState } = useMultiSchema();
@@ -15,12 +15,29 @@ export default function SchemaDescription({ currentLanguage }) {
 
   // Use current schema state's metadata
   const currentMeta = schemaState?.metadata || {};
-  const metaForLang = currentMeta; // metadata stores display names (English/French)
-
+  
+  // Convert display language to ISO language code
+  const langKey =
+    currentLanguage?.toLowerCase() === "english"
+      ? "eng"
+      : currentLanguage?.toLowerCase() === "french"
+        ? "fra"
+        : currentLanguage?.toLowerCase();
+  
+  // Get the current UI language to determine fallback behavior
+  const uiLanguage = i18n.language; // "en" or "fr"
+  
+  // Get metadata for the current display language from localized structure
+  const localizedMeta = currentMeta.localized?.[langKey];
+  
   const schemaName =
-    metaForLang?.name || schemaDescription?.[currentLanguage]?.name || t("Unknown");
+    localizedMeta?.name || 
+    (uiLanguage === "en" ? currentMeta?.name : null) || 
+    schemaDescription?.[currentLanguage]?.name || 
+    t("Unknown");
   const schemaDescriptionText =
-    metaForLang?.description ||
+    localizedMeta?.description ||
+    (uiLanguage === "en" ? currentMeta?.description : null) ||
     schemaDescription?.[currentLanguage]?.description ||
     t("No description available");
   const classification =

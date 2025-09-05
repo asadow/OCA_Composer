@@ -117,61 +117,40 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
     // NEW UNIFIED APPROACH: Get complete schema data directly
     const completeSchema = getCompleteSchema(currentSchemaId);
 
-    // Debug logging
-    console.log("AttributeDetails initialization (UNIFIED):", {
-      currentSchemaId,
-      hasSchemaState: !!schemaState,
-      schemaStateAttributes: schemaState?.attributes?.length || 0,
-      hasCompleteSchema: !!completeSchema,
-      completeSchemaAttributes: completeSchema?.attributes ? Object.keys(completeSchema.attributes) : null
-    });
-
-    // Check if existing state matches the schema's actual attributes from complete schema
-    if (schemaState?.attributes && schemaState.attributes.length > 0 && completeSchema) {
-      const schemaAttributes = completeSchema.attributes || {};
-      const expectedAttributeNames = Object.keys(schemaAttributes);
-      const existingAttributeNames = schemaState.attributes.map((attr) => attr.Attribute);
-      
-      console.log("Attribute comparison (UNIFIED):", {
-        expectedAttributeNames,
-        existingAttributeNames,
-        match: expectedAttributeNames.every((name) => existingAttributeNames.includes(name))
-      });
-      
-      // Check if existing state contains all expected attributes (and possibly more user-added ones)
-      const hasAllExpectedAttributes = expectedAttributeNames.every((name) => 
-        existingAttributeNames.includes(name)
-      );
-        
-      if (hasAllExpectedAttributes) {
-        // Use existing state (preserves user-added attributes and edits)
-        // Avoid redundant updates to prevent flicker
-        const sameAttrs =
-          JSON.stringify(attributeRowData) === JSON.stringify(schemaState.attributes);
-        const sameList =
-          JSON.stringify(attributesList) ===
-          JSON.stringify(schemaState.attributesList || []);
-        
-        // If attributes don't match, merge carefully to preserve _rid values
-        if (!sameAttrs) {
-          const mergedAttributes = schemaState.attributes.map((schemaAttr) => {
-            const existingAttr = attributeRowData.find(existing => existing.Attribute === schemaAttr.Attribute);
-            // Preserve _rid if it exists in current data
-            return existingAttr?._rid ? { ...schemaAttr, _rid: existingAttr._rid } : schemaAttr;
-          });
-          setAttributeRowData(mergedAttributes);
-        }
-        
-        if (!sameList) setAttributesList(schemaState.attributesList || []);
-        setLoading(false);
-        initializedSchemaRef.current = currentSchemaId;
-        return;
-      }
-      // If some expected attributes are missing, fall through to re-initialize from complete schema
+    // Skip if already initialized for this schema
+    if (initializedSchemaRef.current === currentSchemaId) {
+      setLoading(false);
+      return;
     }
 
-    // Initialize from complete schema (NEW UNIFIED APPROACH)
-    if (completeSchema) {
+    // Check if existing state exists (should take precedence over complete schema)
+    if (schemaState?.attributes && schemaState.attributes.length >= 0) {
+      // Use existing state (preserves user-added/deleted attributes and edits)
+      // Avoid redundant updates to prevent flicker
+      const sameAttrs =
+        JSON.stringify(attributeRowData) === JSON.stringify(schemaState.attributes);
+      const sameList =
+        JSON.stringify(attributesList) ===
+        JSON.stringify(schemaState.attributesList || []);
+      
+      // If attributes don't match, merge carefully to preserve _rid values
+      if (!sameAttrs) {
+        const mergedAttributes = schemaState.attributes.map((schemaAttr) => {
+          const existingAttr = attributeRowData.find(existing => existing.Attribute === schemaAttr.Attribute);
+          // Preserve _rid if it exists in current data
+          return existingAttr?._rid ? { ...schemaAttr, _rid: existingAttr._rid } : schemaAttr;
+        });
+        setAttributeRowData(mergedAttributes);
+      }
+      
+      if (!sameList) setAttributesList(schemaState.attributesList || []);
+      setLoading(false);
+      initializedSchemaRef.current = currentSchemaId;
+      return;
+    }
+
+    // Only initialize from complete schema if no existing state at all
+    if (completeSchema && !schemaState?.attributes) {
       const schemaAttributes = completeSchema.attributes || {};
       const newAttributeRowData = Object.entries(schemaAttributes).map(([key, value]) => {
         // Check if this attribute has entry codes (is a list)
@@ -182,10 +161,13 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
                 entryOverlay.attribute_entries && entryOverlay.attribute_entries[key]
             )) ||
           (completeSchema.overlays?.entry_code &&
-            completeSchema.overlays.entry_code.some(
-              (entryOverlay) =>
-                entryOverlay.attribute_entry_codes && entryOverlay.attribute_entry_codes[key]
-            ));
+            (Array.isArray(completeSchema.overlays.entry_code)
+              ? completeSchema.overlays.entry_code.some(
+                  (entryOverlay) =>
+                    entryOverlay.attribute_entry_codes && entryOverlay.attribute_entry_codes[key]
+                )
+              : completeSchema.overlays.entry_code.attribute_entry_codes &&
+                completeSchema.overlays.entry_code.attribute_entry_codes[key]));
 
         // Handle schema references (refs/refn) - these should be "Child Schema" not a type
         let displayType = value;
@@ -234,10 +216,9 @@ const AttributeDetails = forwardRef(({ pageBack, pageForward, removeStep }, ref)
       setLoading(false);
       initializedSchemaRef.current = currentSchemaId;
     } else {
-      console.log("No completeSchema found for currentSchemaId:", currentSchemaId);
       setLoading(false);
     }
-  }, [currentSchemaId, getCompleteSchema, getSchemaState, updateSchemaState]);
+  }, [currentSchemaId, i18n.language]); // Removed function dependencies that cause infinite loops
 
   // Intentionally removed continuous auto-sync to prevent flicker.
 

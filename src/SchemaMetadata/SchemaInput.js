@@ -91,7 +91,10 @@ export default function SchemaInput({
         ...prevLoc,
         [langKey]: { ...(prevLoc[langKey] || {}), name: newText }
       };
-      const nextMeta = { ...prevMeta, name: newText, localized: nextLocalized };
+      // Only update the global name field if editing English (primary language)
+      const nextMeta = langKey === "eng" 
+        ? { ...prevMeta, name: newText, localized: nextLocalized }
+        : { ...prevMeta, localized: nextLocalized };
       updateSchemaState(targetId, { metadata: nextMeta });
     }
   };

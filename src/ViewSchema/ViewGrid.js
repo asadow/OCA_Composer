@@ -397,8 +397,10 @@ export default function ViewGrid({
           ? item.List[currentLanguage]
           : "Not a List";
 
-      if (newCardinalityData[index] && newCardinalityData[index].EntryLimit) {
-        item.Cardinality = newCardinalityData[index].EntryLimit;
+      // Find cardinality data by attribute name instead of index to ensure correct mapping
+      const cardinalityItem = newCardinalityData.find(card => card.Attribute === item.Attribute);
+      if (cardinalityItem && (cardinalityItem.EntryLimit || cardinalityItem.Cardinality)) {
+        item.Cardinality = cardinalityItem.EntryLimit || cardinalityItem.Cardinality;
       }
       
       // Add Required and Format Rule data from overlay selections
