@@ -25,6 +25,7 @@ import { AgGridReact } from "ag-grid-react";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 import { Context } from "../App";
 import { useMultiSchema } from "../context/MultiSchemaContext";
 import BackNextSkeleton from "../components/BackNextSkeleton";
@@ -52,7 +53,7 @@ const TrashCanButton = memo(
             transition: "all 0.2s ease-in-out"
           }}
           disabled={props.node.data?.EntryLimit === ""}
-          onClick={() => props?.handleDeleteRow()}
+          onClick={() => props.handleDeleteRow(props)}
         >
           <DeleteOutlineIcon />
         </IconButton>
@@ -109,16 +110,12 @@ const Cardinality = () => {
   // Initialize cardinality data from schema attributes if not exists
   useEffect(() => {
     if (!schemaState?.cardinalityData && schemaState?.attributes) {
-      // Get current language for labels - try multiple methods
-      const currentLanguage = i18next.language === "fr" ? "French" : "English";
+      // Get current language for labels - use ISO codes that match the data structure
+      const currentLanguage = i18next.language.startsWith("fr") ? "fra" : "eng";
       const labelData = schemaState?.lanAttributeRowData?.[currentLanguage] || [];
-      console.log('Cardinality: Initial setup - language:', currentLanguage, 'i18next.language:', i18next.language);
-      console.log('Cardinality: Available languages in lanAttributeRowData:', Object.keys(schemaState?.lanAttributeRowData || {}));
-      console.log('Cardinality: labelData:', labelData);
       
       const newCardinalityData = schemaState.attributes.map((attr) => {
         const labelInfo = labelData.find(l => l.Attribute === attr.Attribute);
-        console.log(`Cardinality: ${attr.Attribute} - found label:`, labelInfo?.Label);
         return {
           Attribute: attr.Attribute,
           Type: attr.Type || "Text",
@@ -128,28 +125,35 @@ const Cardinality = () => {
       });
       updateCurrentSchema({ cardinalityData: newCardinalityData });
     } else if (schemaState?.cardinalityData && schemaState?.attributes) {
-      // Convert existing cardinalityData to component format if needed
-      // Get current language for labels - try multiple methods
-      const currentLanguage = i18next.language === "fr" ? "French" : "English";
+      // Check if we need to update labels or convert format
+      const currentLanguage = i18next.language.startsWith("fr") ? "fra" : "eng";
       const labelData = schemaState?.lanAttributeRowData?.[currentLanguage] || [];
-      console.log('Cardinality: Update setup - language:', currentLanguage, 'i18next.language:', i18next.language);
-      console.log('Cardinality: Available languages in lanAttributeRowData:', Object.keys(schemaState?.lanAttributeRowData || {}));
-      console.log('Cardinality: labelData:', labelData);
       
-      const convertedData = schemaState.attributes.map((attr) => {
-        const existingCardinality = schemaState.cardinalityData.find((card) => card.Attribute === attr.Attribute);
-        const labelInfo = labelData.find(l => l.Attribute === attr.Attribute);
-        const entryLimit = existingCardinality?.EntryLimit || existingCardinality?.Cardinality || "";
-        console.log(`Cardinality: ${attr.Attribute} - found label:`, labelInfo?.Label, 'entryLimit:', entryLimit);
-        return {
-          Attribute: attr.Attribute,
-          Type: attr.Type || "Text", // Always use current Type from attributes
-          // Handle both EntryLimit (component format) and Cardinality (OCA format)
-          EntryLimit: entryLimit,
-          Label: labelInfo?.Label || existingCardinality?.Label || ""
-        };
+      // Only update if there are missing labels or format conversion needed
+      const needsUpdate = schemaState.cardinalityData.some((card) => {
+        const attr = schemaState.attributes.find(a => a.Attribute === card.Attribute);
+        const labelInfo = labelData.find(l => l.Attribute === card.Attribute);
+        const hasLabelUpdate = labelInfo?.Label && !card.Label;
+        const hasFormatConversion = card.Cardinality && !card.EntryLimit;
+        const hasTypeUpdate = attr?.Type && attr.Type !== card.Type;
+        return hasLabelUpdate || hasFormatConversion || hasTypeUpdate;
       });
-      updateCurrentSchema({ cardinalityData: convertedData });
+      
+      if (needsUpdate) {
+        const convertedData = schemaState.attributes.map((attr) => {
+          const existingCardinality = schemaState.cardinalityData.find((card) => card.Attribute === attr.Attribute);
+          const labelInfo = labelData.find(l => l.Attribute === attr.Attribute);
+          const entryLimit = existingCardinality?.EntryLimit || existingCardinality?.Cardinality || "";
+          return {
+            Attribute: attr.Attribute,
+            Type: attr.Type || "Text", // Always use current Type from attributes
+            // Handle both EntryLimit (component format) and Cardinality (OCA format)
+            EntryLimit: entryLimit,
+            Label: labelInfo?.Label || existingCardinality?.Label || ""
+          };
+        });
+        updateCurrentSchema({ cardinalityData: convertedData });
+      }
     }
     // Set loading to false once data is ready
     if (schemaState?.cardinalityData || schemaState?.attributes) {
@@ -206,16 +210,26 @@ const Cardinality = () => {
   }, []);
 
   const handleDeleteRow = useCallback((params) => {
-    setSelectedCellData({ ...params?.data, rowIndex: params?.rowIndex });
+    // Update the grid data immediately
     params.node.updateData({
       ...params.node.data,
       EntryLimit: ""
     });
-    cardinalityRef.current.api.redrawRows({ rowNodes: [params.node] });
-    setExactValue("");
-    setMinValue("");
-    setMaxValue("");
-  }, []);
+    
+    // Save the changes to context
+    const updatedData = cardinalityRef.current.api
+      .getRenderedNodes()
+      ?.map((node) => node?.data);
+    setCardinalityData(updatedData);
+    
+    // Clear the form if this row was selected
+    if (selectedCellData && selectedCellData.Attribute === params.node.data.Attribute) {
+      setSelectedCellData(null);
+      setExactValue("");
+      setMinValue("");
+      setMaxValue("");
+    }
+  }, [setCardinalityData, selectedCellData]);
 
   const handleValueChange = useCallback((value, type) => {
     switch (type) {
@@ -335,10 +349,10 @@ const Cardinality = () => {
       {
         headerName: "Garbage",
         field: "Delete",
-        cellRendererFramework: TrashCanButton,
-        cellRendererParams: (params) => ({
-          handleDeleteRow: () => handleDeleteRow(params)
-        }),
+        cellRenderer: TrashCanButton,
+        cellRendererParams: {
+          handleDeleteRow: handleDeleteRow
+        },
         width: 100,
         headerComponent: CellHeader,
         headerComponentParams: {

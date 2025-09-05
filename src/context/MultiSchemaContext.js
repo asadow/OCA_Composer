@@ -206,17 +206,11 @@ export const MultiSchemaProvider = ({ children }) => {
 
   // Initialize schema from OCA package
   const initializeSchemaFromOCA = useCallback((schemaId, ocaPackage) => {
-    console.log("MultiSchemaContext: Initializing schema", schemaId, "from OCA package:", ocaPackage);
     const schemaData = getSchemaDataById(ocaPackage, schemaId);
     if (!schemaData) {
-      console.log("MultiSchemaContext: No schema data found for", schemaId);
       return;
     }
     
-    console.log("MultiSchemaContext: Found schema data:", schemaData);
-    console.log("MultiSchemaContext: Schema overlays structure:", schemaData?.overlays);
-    console.log("MultiSchemaContext: Looking for format overlay at schemaData.overlays.format:", schemaData?.overlays?.format);
-
     // Normalizer helpers
     const normalizeType = (rawType) => {
       if (!rawType) return "";
@@ -386,14 +380,12 @@ export const MultiSchemaProvider = ({ children }) => {
     // Format overlay
     const formatOverlay = schemaData.overlays?.format;
     if (formatOverlay?.attribute_formats) {
-      console.log("MultiSchemaContext: Loading format rules from OCA package:", formatOverlay.attribute_formats);
       Object.entries(formatOverlay.attribute_formats).forEach(([attr, format]) => {
         formatRuleData.push({
           Attribute: attr,
           "Format Rule": format || ""
         });
       });
-      console.log("MultiSchemaContext: Format rule data created:", formatRuleData);
     }
 
     // Cardinality overlay
@@ -500,12 +492,6 @@ export const MultiSchemaProvider = ({ children }) => {
       initialized: true
     };
     
-    console.log("MultiSchemaContext: Final schema state for", schemaId, ":", {
-      attributesLength: newState.attributes.length,
-      formatRuleDataLength: newState.formatRuleData.length,
-      formatRuleData: newState.formatRuleData
-    });
-
     setSchemaStates((prev) => ({
       ...prev,
       [schemaId]: newState
